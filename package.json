@@ -1,7 +1,7 @@
 {
   "name": "electron-interfaz",
   "version": "1.0.1",
-  "description": "A minimal Electron application with node serialport",
+  "description": "An interfaz link Electron application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -15,16 +15,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:johnny-five-io/electron-serialport.git"
+    "url": "git@github.com:astoctas/electron-interfaz.git"
   },
   "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
+    "Interfaz",
+    "Robotica"
   ],
-  "author": "GitHub",
+  "author": "astoctas",
   "license": "CC0-1.0",
   "devDependencies": {
     "electron": "^1.8.8",

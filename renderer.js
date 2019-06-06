@@ -12,7 +12,12 @@ var five = require('johnny-five');
 var Interfaz = require("./interfaz")(five);
 
 /* WEB SERVER */
-app.listen(4268);
+var socketPort = 4268;
+app.listen(socketPort);
+
+var msg = document.getElementById("socket-msg");
+msg.innerHTML = "Socket abierto en puerto "+socketPort;
+
 
 function handler(req, res) {
   fs.readFile(__dirname + '/public' + req.url,
@@ -34,13 +39,16 @@ var instances = new Array();
 function start() {
   ifaz = new Interfaz();
 }
-
+/*
 board = new five.Board({
   repl: false
 });
 board.on("ready", function () {
+  var led = new five.Led(13);
+  led.blink();
   start();
 });
+*/
 
 io.sockets.on('connection', function (socket) {
 
@@ -128,6 +136,7 @@ io.sockets.on('connection', function (socket) {
 
 })
 
+var sel = document.getElementById('select-ports');
 
 serialport.list((err, ports) => {
   console.log('ports', ports);
@@ -142,14 +151,57 @@ serialport.list((err, ports) => {
     document.getElementById('error').textContent = 'No ports discovered'
   }
 
+
   const headers = Object.keys(ports[0])
   const table = createTable(headers)
   tableHTML = ''
   table.on('data', data => tableHTML += data)
   table.on('end', () => document.getElementById('ports').innerHTML = tableHTML)
-  ports.forEach(port => table.write(port))
+  ports.forEach(port => {
+    var option = document.createElement("option");
+    option.innerHTML = port.comName;
+    option.value = port.comName;
+    sel.appendChild(option);
+    table.write(port);
+  })
   table.end();
+})
 
+var connectBtn = document.getElementById('connectBtn');
+connectBtn.addEventListener("click", function () {
+
+  board = new five.Board({
+    port: sel.value,
+    repl: false
+  });
+
+  board.on("error", function (err) {
+    var msg = document.getElementById("error-msg");
+    msg.style.display = "block";
+    connectBtn.disabled = true;           
+  })
+  
+  board.on("ready", function () {
+    // TEST var led = new five.Led(13);led.blink();
+    start();
+    console.log("ready!");
+    var msg = document.getElementById("disconnected-msg");
+    msg.style.display = "none";
+    var msg = document.getElementById("connected-msg");
+    msg.style.display = "block";
+    connectBtn.disabled = true;           
+  });
+
+  board.io.transport.on("close", function (err) {
+    console.log("desconectado!");
+    var msg = document.getElementById("connected-msg");
+    msg.style.display = "none";
+    var msg = document.getElementById("disconnected-msg");
+    msg.style.display = "block";
+    connectBtn.disabled = false;           
+
+
+  })
 })
 
 

@@ -1,23 +1,31 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Hello World!</title>
-  </head>
-  <body>
-    <h1>Hello World!</h1>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    We are using Node.js <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    Electron <script>document.write(process.versions.electron)</script>,
-    and Serialport <script>document.write(require('serialport/package').version)</script>.
 
-    <div id="error"></div>
-    <div id="ports"></div>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <title>Interfaz Link</title>
+</head>
 
-  <script>
-    // You can also require other files to run in this process
-    require('./renderer.js')
-  </script>
+<body style="padding: 20px;">
+  <h1>Interfaz link</h1>
+  <h3 id="socket-msg" style="color: green; display: block"></h3>
+
+  <!-- All of the Node.js APIs are available in this renderer process. -->
+  <h3>Puertos disponibles</h3>
+  <div id="error"></div>
+  <div id="ports"></div>
+  <p></p>
+  <select id="select-ports"></select>
+  <button id="connectBtn">Conectar</button>
+  <button id="resetBtn" onclick="window.location.reload()">Reset</button>
+  <h3 id="connected-msg" style="color: green; display: none">conectado!</h3>
+  <h3 id="disconnected-msg" style="color: red; display: none">desconectado!</h3>
+  <h3 id="error-msg" style="color: red; display: none">No se puede abrir el puerto.  Hacer click en RESET y volver a intentar con otro puerto.</h3>
+</body>
+
+<script>
+  // You can also require other files to run in this process
+  require('./renderer.js')
+</script>
+
 </html>
