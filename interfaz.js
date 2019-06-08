@@ -8,6 +8,8 @@ const DC_INVERSE = 4;
 const DC_DIR = 5;
 const DC_SPEED = 6;
 const FIRMATA_EXTENDED_ANALOG = 0x6F;
+const SERVO_DATA = 4;
+const SERVO_WRITE = 2;
 
 function DC(io, deviceNum) {
     this.io = io;
@@ -47,13 +49,14 @@ function STEPPER(io, deviceNum) {
     }
 }
 
-function SERVO(io, pin) {
+function SERVO(io, deviceNum) {
     this.io = io;
-    this.pin = pin; 
+    this.deviceNum = deviceNum; 
+
     this.position = function (pos) {
         //this.io.servoWrite(this.pin, pos);
         var arrPos = Firmata.encode([pos]);
-        this.io.sysexCommand([FIRMATA_EXTENDED_ANALOG,this.pin, arrPos[0], arrPos[1] ]);
+        this.io.sysexCommand([SERVO_DATA,SERVO_WRITE,this.deviceNum, arrPos[0], arrPos[1] ]);
     }
 }
 
@@ -132,7 +135,7 @@ module.exports = function (five) {
         // Define Component initialization
         this._dc = [new DC(this.io, 0),new DC(this.io, 1),new DC(this.io, 2),new DC(this.io, 3),new DC(this.io, 4),new DC(this.io, 5),new DC(this.io, 6),new DC(this.io, 7)];
         this._steppers = [new STEPPER(this.io, 0),new STEPPER(this.io, 1),new STEPPER(this.io, 2)];
-        this._servos = [new SERVO(this.io, 10),new SERVO(this.io, 11),new SERVO(this.io, 12)];
+        this._servos = [new SERVO(this.io, 0),new SERVO(this.io, 1),new SERVO(this.io, 2)];
         this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
         this._digitals = [new DIGITAL(this.io, 64), new DIGITAL(this.io, 65), new DIGITAL(this.io, 66), new DIGITAL(this.io, 67), new DIGITAL(this.io, 68), new DIGITAL(this.io, 69)];
         this._i2cs = [];
