@@ -1,8 +1,8 @@
-const electron = require('electron')
+const { app, Menu, Tray, BrowserWindow } = require('electron');
 // Module to control application life.
-const app = electron.app
+//const app = electron.app
 // Module to create native browser window.
-const BrowserWindow = electron.BrowserWindow
+//const BrowserWindow = electron.BrowserWindow
 
 const path = require('path')
 const url = require('url')
@@ -11,13 +11,16 @@ require('electron-reload')(__dirname,{
   electron: path.join(__dirname, 'node_modules', '.bin', 'electron')
 });
 
+let tray = null
+
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
 function createWindow () {
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1200, height: 600})
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false})
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -36,6 +39,20 @@ function createWindow () {
     // when you should delete the corresponding element.
     mainWindow = null
   })
+
+  tray = new Tray('interfaz-small.png')
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
+  ])
+  tray.setToolTip('This is my application.')
+  tray.setContextMenu(contextMenu)
+
+  
+  tray.on('click', () => {
+    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show()
+  })
+
+
 }
 
 // This method will be called when Electron has finished

@@ -10,6 +10,10 @@ const DC_SPEED = 6;
 const FIRMATA_EXTENDED_ANALOG = 0x6F;
 const SERVO_DATA = 4;
 const SERVO_WRITE = 2;
+const LCD_DATA = 3;
+const LCD_PRINT = 0;
+const LCD_PUSH = 1;
+const LCD_CLEAR = 2;
 
 function DC(io, deviceNum) {
     this.io = io;
@@ -107,7 +111,34 @@ function I2C(io, address) {
     }
 }
 
+function LCD(io) {
+    this.io = io;
+    this.print = function(row, str) {
+        var buffer = new Buffer(str, 'utf16le');
+        var commands = new Array();
+        commands[0] = LCD_DATA;
+        commands[1] = LCD_PRINT;
+        commands[2] = row;
+        for (var i = 0; i < buffer.length; i++) {
+            commands.push(buffer[i]);
+        }    
+        this.io.sysexCommand(commands);
+    }
+    this.push = function(str) {
+        var buffer = new Buffer(str, 'utf16le');
+        var commands = new Array();
+        commands[0] = LCD_DATA;
+        commands[1] = LCD_PUSH;
+        for (var i = 0; i < buffer.length; i++) {
+            commands.push(buffer[i]);
+        }    
+        this.io.sysexCommand(commands);
+    }
+    this.clear = function() {
+        this.io.sysexCommand([LCD_DATA, LCD_CLEAR]);
 
+    }
+}
 
 module.exports = function (five) {
     return (function() {
@@ -139,6 +170,7 @@ module.exports = function (five) {
         this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
         this._digitals = [new DIGITAL(this.io, 64), new DIGITAL(this.io, 65), new DIGITAL(this.io, 66), new DIGITAL(this.io, 67), new DIGITAL(this.io, 68), new DIGITAL(this.io, 69)];
         this._i2cs = [];
+        this._lcd = new LCD(this.io);
   
       }
   
@@ -174,6 +206,9 @@ module.exports = function (five) {
                 this.io.i2cConfig({ address: address, delay: delay });
             }
             return this._i2cs[address];
+        }
+        Interfaz.prototype.lcd = function() {
+            return this._lcd;
         }
          
   

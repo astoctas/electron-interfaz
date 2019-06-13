@@ -35,12 +35,17 @@ function handler(req, res) {
 var board;
 var ifaz;
 var instances = new Array();
+var reconnectFlag = false;
 
-function start() {
+function start(port) {
   ifaz = new Interfaz();
+  var lcd = ifaz.lcd();
+  lcd.clear();
+  lcd.print(0,"Conectado a");
+  lcd.print(1,port);
 }
 /*
-board = new five.Board({
+board = new five.Board({ 
   repl: false
 });
 board.on("ready", function () {
@@ -51,7 +56,7 @@ board.on("ready", function () {
 */
 
 io.sockets.on('connection', function (socket) {
-
+  console.log(socket);
   socket.on('OUTPUT', function (data) {
     ifaz.output(data.index)[data.method](data.param);
   })
@@ -138,70 +143,117 @@ io.sockets.on('connection', function (socket) {
 
 var sel = document.getElementById('select-ports');
 
-serialport.list((err, ports) => {
-  console.log('ports', ports);
-  if (err) {
-    document.getElementById('error').textContent = err.message
-    return
-  } else {
-    document.getElementById('error').textContent = ''
-  }
-
-  if (ports.length === 0) {
-    document.getElementById('error').textContent = 'No ports discovered'
-  }
-
-
-  const headers = Object.keys(ports[0])
-  const table = createTable(headers)
-  tableHTML = ''
-  table.on('data', data => tableHTML += data)
-  table.on('end', () => document.getElementById('ports').innerHTML = tableHTML)
-  ports.forEach(port => {
-    var option = document.createElement("option");
-    option.innerHTML = port.comName;
-    option.value = port.comName;
-    sel.appendChild(option);
-    table.write(port);
+function scanPorts() {
+  serialport.list((err, ports) => {
+    console.log('ports', ports);
+    if (err) {
+      document.getElementById('error').textContent = err.message
+      return
+    } else {
+      document.getElementById('error').textContent = ''
+    }
+  
+    if (ports.length === 0) {
+      document.getElementById('error').textContent = 'No ports discovered'
+    }
+  
+  
+    const headers = Object.keys(ports[0])
+    const table = createTable(headers)
+    tableHTML = ''
+    table.on('data', data => tableHTML += data)
+    table.on('end', () => document.getElementById('ports').innerHTML = tableHTML)
+    ports.forEach(port => {
+      var option = document.createElement("option");
+      option.innerHTML = port.comName;
+      option.value = port.comName;
+      sel.appendChild(option);
+      table.write(port);
+    })
+    table.end();
   })
-  table.end();
-})
+}
 
-var connectBtn = document.getElementById('connectBtn');
-connectBtn.addEventListener("click", function () {
-
+function connect(port) {
   board = new five.Board({
-    port: sel.value,
+    port: port,
     repl: false
   });
 
   board.on("error", function (err) {
+    console.log(board);
     var msg = document.getElementById("error-msg");
     msg.style.display = "block";
-    connectBtn.disabled = true;           
+    connectBtn.disabled = false;           
   })
   
   board.on("ready", function () {
+    console.log(board);
     // TEST var led = new five.Led(13);led.blink();
-    start();
+    start(board.port);
     console.log("ready!");
     var msg = document.getElementById("disconnected-msg");
     msg.style.display = "none";
     var msg = document.getElementById("connected-msg");
     msg.style.display = "block";
-    connectBtn.disabled = true;           
+    //connectBtn.disabled = true;    
+    reconnectFlag = false;
+
+    if(board.io)
+    board.io.transport.on("close", function (err) {
+      console.log("desconectado!");
+      var msg = document.getElementById("connected-msg");
+      msg.style.display = "none";
+      var msg = document.getElementById("disconnected-msg");
+      msg.style.display = "block";
+      connectBtn.disabled = false;        
+      reconnectFlag = true;   
+      scanPorts();
+    })
+  
   });
+}
 
-  board.io.transport.on("close", function (err) {
-    console.log("desconectado!");
-    var msg = document.getElementById("connected-msg");
-    msg.style.display = "none";
-    var msg = document.getElementById("disconnected-msg");
-    msg.style.display = "block";
-    connectBtn.disabled = false;           
-
-
+if(window.localStorage.getItem("port") != "null") {
+  defaultPort = window.localStorage.getItem("port");
+  reconnectFlag = true;
+  serialport.list((err, ports) => {
+    ports.forEach(port => {
+      if(port.comName == defaultPort) {
+        reconnectFlag = false;
+        connect(defaultPort);
+        }
+    })
   })
+} else {
+  connect();
+}
+
+var connectBtn = document.getElementById('connectBtn');
+connectBtn.addEventListener("click", function () {
+  window.localStorage.setItem("port", sel.value);
+  window.location.reload();
 })
 
+var scanBtn = document.getElementById('scanBtn');
+scanBtn.addEventListener("click", function () {
+  scanPorts();
+})
 
+  setInterval(function() {
+    if(reconnectFlag ) {
+      console.log("Intento de reconexión");
+      defaultPort = window.localStorage.getItem("port");
+      if(defaultPort) {
+        serialport.list((err, ports) => {
+          ports.forEach(port => {
+            if(port.comName == defaultPort) {
+              window.location.reload();
+            }
+          })
+        })
+      } 
+    }
+  }, 2000);
+  
+  scanPorts();
