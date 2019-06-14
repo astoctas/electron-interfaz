@@ -1,5 +1,5 @@
 {
-  "name": "electron-interfaz",
+  "name": "interfaz-link",
   "version": "1.0.1",
   "description": "An interfaz link Electron application",
   "main": "main.js",
@@ -12,6 +12,7 @@
   },
   "build": {
     "appId": "interfaz.nh",
+    "productName": "Interfaz Link",
     "files": ["**/*", "resources/", "build/interfaz.png"] 
   },
   "repository": {
