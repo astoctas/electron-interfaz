@@ -6,6 +6,7 @@ const { app, Menu, Tray, BrowserWindow, nativeImage } = require('electron');
 
 const path = require('path')
 const url = require('url')
+var os = require('os');
 
 require('electron-reload')(__dirname,{
   electron: path.join(__dirname, 'node_modules', '.bin', 'electron')
@@ -40,7 +41,7 @@ function createWindow () {
     mainWindow = null
   })
 
-var  iconPath = 'build/interfaz.png';
+var  iconPath = os.platform() == 'win32' ?   'build/interfaz.ico' :  'build/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
   tray = new Tray(trayIcon)
