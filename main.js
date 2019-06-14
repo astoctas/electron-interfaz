@@ -47,7 +47,7 @@ var trayIcon = nativeImage.createFromPath(iconPath);
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
   ])
-  tray.setToolTip('This is my application.')
+  tray.setToolTip('Interfaz Link')
   tray.setContextMenu(contextMenu)
 
   
