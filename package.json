@@ -11,7 +11,8 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "interfaz.nh"
+    "appId": "interfaz.nh",
+    "files": ["**/*", "build/interfaz-small.png"] 
   },
   "repository": {
     "type": "git",

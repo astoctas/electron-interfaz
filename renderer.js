@@ -11,12 +11,43 @@ var fs = require('fs');
 var five = require('johnny-five');
 var Interfaz = require("./interfaz")(five);
 
+var os = require('os');
+var ifaces = os.networkInterfaces();
+
+var ips = new Array();
+
+Object.keys(ifaces).forEach(function (ifname) {
+  var alias = 0;
+
+  ifaces[ifname].forEach(function (iface) {
+    if ('IPv4' !== iface.family || iface.internal !== false) {
+      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      return;
+    }
+    ips.push(iface.address);
+
+    if (alias >= 1) {
+      // this single interface has multiple ipv4 addresses
+      console.log(ifname + ':' + alias, iface.address);
+    } else {
+      // this interface has only one ipv4 adress
+      console.log(ifname, iface.address);
+    }
+    ++alias;
+  });
+});
+
+
 /* WEB SERVER */
 var socketPort = 4268;
 app.listen(socketPort);
 
 var msg = document.getElementById("socket-msg");
-msg.innerHTML = "Socket abierto en puerto "+socketPort;
+msg.innerHTML = "Socket abierto en: ";
+msg.innerHTML += "<br/>127.0.0.1:"+socketPort;
+ips.forEach(function(i,v){
+  msg.innerHTML += "<br/>"+i+":"+socketPort;
+})
 
 
 function handler(req, res) {

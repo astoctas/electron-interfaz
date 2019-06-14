@@ -40,7 +40,7 @@ function createWindow () {
     mainWindow = null
   })
 
-  tray = new Tray('interfaz-small.png')
+  tray = new Tray('build/interfaz-small.png')
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
   ])
