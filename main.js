@@ -41,7 +41,7 @@ function createWindow () {
     mainWindow = null
   })
 
-var  iconPath = os.platform() == 'win32' ?   'build/interfaz.ico' :  'build/interfaz.png';
+var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'build/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
   tray = new Tray(trayIcon)

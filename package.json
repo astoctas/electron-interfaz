@@ -12,7 +12,7 @@
   },
   "build": {
     "appId": "interfaz.nh",
-    "files": ["**/*", "build/interfaz-small.png"] 
+    "files": ["**/*", "resources/", "build/interfaz.png"] 
   },
   "repository": {
     "type": "git",
