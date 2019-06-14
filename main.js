@@ -21,7 +21,9 @@ let mainWindow
 
 function createWindow () {
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false})
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false,
+    icon: path.join(__dirname, 'resources','interfaz.png')
+  })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
