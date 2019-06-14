@@ -1,4 +1,4 @@
-const { app, Menu, Tray, BrowserWindow } = require('electron');
+const { app, Menu, Tray, BrowserWindow, nativeImage } = require('electron');
 // Module to control application life.
 //const app = electron.app
 // Module to create native browser window.
@@ -40,7 +40,10 @@ function createWindow () {
     mainWindow = null
   })
 
-  tray = new Tray('build/interfaz-small.png')
+var  iconPath = 'build/interfaz.png';
+var trayIcon = nativeImage.createFromPath(iconPath);
+//trayIcon = trayIcon.resize({ width: 32, height: 32 });
+  tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
   ])
