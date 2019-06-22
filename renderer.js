@@ -13,6 +13,7 @@ var Interfaz = require("./interfaz")(five);
 
 var os = require('os');
 var ifaces = os.networkInterfaces();
+//const { VM } = require('vm2');
 
 var ips = new Array();
 
@@ -70,6 +71,7 @@ var reconnectFlag = false;
 
 function start(port) {
   ifaz = new Interfaz();
+
   var lcd = ifaz.lcd();
   lcd.clear();
   lcd.print(0,"Conectado a");
@@ -88,6 +90,12 @@ board.on("ready", function () {
 
 io.sockets.on('connection', function (socket) {
   console.log(socket);
+
+  socket.on('RESTART', function () {
+    window.location.reload();
+  })
+
+
   socket.on('OUTPUT', function (data) {
     ifaz.output(data.index)[data.method](data.param);
   })
@@ -119,55 +127,87 @@ io.sockets.on('connection', function (socket) {
   })
 
   socket.on('I2C', function (data) {
+    console.log(data);
     ifaz.i2c(data.address)[data.method](data.register, data.param, function (result) {
+      console.log(result);
       socket.emit('I2C_MESSAGE', { address: data.address, register: data.register, value: result });
     });
   })
 
+  socket.on('DEVICES_RESET', function () {
+    instances = new Array();
+  });
+
+  socket.on('DEVICE_REMOVE', function (data) {
+    instances = instances.filter(i => i.id != data.id);
+    console.log(instances)
+  });
+
+
   socket.on('DEVICE', function (data, fn) {
-    let vm = new VM({ sandbox: { instances: instances, data: data, five: five } });
+    if(typeof data == "string") data = JSON.parse(data);
+    var ins = instances.filter(i => i.id == data.id).shift();
+    // SI YA EXISTE SALGO
+    if(ins) {
+      if(typeof fn !="undefined") fn(false);
+      return;
+    }
+    //let vm = new VM({ sandbox: { instances: instances, data: data, five: five }, require: {external: true,root: "./", }});
     try {
-      let result = vm.run('new five.' + data.device + '(' + JSON.stringify(data.options) + ')');
-      instances[instances.length] = result
+      console.log(data.options);
+      data.options = (typeof data.options == "string") ? data.options : JSON.stringify(data.options);
+      let result = eval('new five.' + data.device + '(' + data.options + ')');
+      instances.push({id: data.id, device: result});
+      console.log(instances)
     }
     catch (error) {
       console.error(error);
-      fn(false);
+      if(typeof fn !="undefined")  fn(false);
     }
-    fn(instances.length - 1);
+    if(typeof fn !="undefined") fn(instances.length - 1);
   })
 
   socket.on('DEVICE_EVENT', function (data, fn) {
-    if (typeof instances[data.id] == "object") {
-      instances[data.id].on(data.event, function () {
+    console.log(data);
+    var ins = instances.filter(i => i.id == data.id).shift();
+    if (typeof ins== "object") {
+      if(typeof data.attributes == "string") data.attributes = JSON.parse(data.attributes);
+      ins.device.on(data.event, function () {
         results = {};
         try {
           data.attributes.forEach((reg) => {
             results[reg] = this[reg];
           })
-          socket.emit(data.event + data.id, { data: results });
+          //console.log(results)
+          socket.emit('DEVICE_MESSAGE', { event: data.event , id: data.id, data: results });
         } catch (error) {
           console.log(error);
-          fn(false);
+          if(typeof fn !="undefined") fn(false);
         }
       });
-      fn(true);
+      if(typeof fn !="undefined") fn(true);
     } else {
-      fn(false);
+      if(typeof fn !="undefined") fn(false);
     }
   })
 
   socket.on('DEVICE_CALL', function (data, fn) {
-    console.log(instances[data.id], data);
-    let vm = new VM({ sandbox: { instances: instances, data: data } });
+    console.log(instances, data);
+    var ins = instances.filter(i => i.id == data.id).shift();
+    if(!ins) { 
+      if(typeof fn !="undefined") fn(false);
+      return;
+    };
+    //let vm = new VM({ sandbox: { ins: ins, data: data, five: five } });
     try {
-      let result = vm.run('instances[' + data.id + '].' + data.method);
+      let result = eval('ins.device.' + data['method']);
+      //let result = eval('ins.device.' + data['method']);
     }
     catch (error) {
       console.error(error);
-      fn(false);
+      if(typeof fn !="undefined") fn(false);
     }
-    fn(true);
+    if(typeof fn !="undefined") fn(true);
   })
 
 })
