@@ -15,6 +15,79 @@ const LCD_PRINT = 0;
 const LCD_PUSH = 1;
 const LCD_CLEAR = 2;
 
+
+String.prototype.formatUnicorn = String.prototype.formatUnicorn ||
+function () {
+    "use strict";
+    var str = this.toString();
+    if (arguments.length) {
+        var t = typeof arguments[0];
+        var key;
+        var args = ("string" === t || "number" === t) ?
+            Array.prototype.slice.call(arguments)
+            : arguments[0];
+
+        for (key in args) {
+            str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
+        }
+    }
+
+    return str;
+};
+
+
+function DCL293(io, deviceNum) {
+    this.io = io;
+    this.dir = 0;
+    this.speed = 255;
+    this.status = 0;
+    this.deviceNum = deviceNum;
+    this.row0 = "salida {0}".formatUnicorn(this.deviceNum+1);
+    this.io.on("brake", function(e,t){
+        var motor = this;
+        setTimeout(function(){
+            motor.stop();
+            },200);
+    });
+    this.onif = function() {
+        if(this.status) {
+            if(!this.dir) {
+                this.io.forward(this.speed);
+            } else {
+                this.io.reverse(this.speed);
+            }
+        }
+    }
+    this.on = function() {
+        this.status = 1;
+        this.onif();
+        return {"message":[this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed/255*100))]}
+    }
+    this.off = function() {
+        this.io.stop();
+        this.status = 0;
+        return {"message":[this.row0, "apagado"]}
+    }
+    this.brake = function() {
+        this.io.brake();
+        return {"message":[this.row0, "frenado"]}
+    }
+    this.inverse = function() {
+        this.direction(!this.dir);
+        return {"message":[this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]}
+    }
+    this.direction = function(dir) {
+        this.dir = dir;
+        this.onif();
+        return {"message":[this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")]}
+    }
+    this.power = function(pow) {
+        this.speed = pow;
+        this.onif();
+        return {"message":[this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow/255*100))]}
+    }
+}
+/*
 function DC(io, deviceNum) {
     this.io = io;
     this.deviceNum = deviceNum;
@@ -37,7 +110,8 @@ function DC(io, deviceNum) {
         this.io.sysexCommand([DC_MESSAGE,DC_SPEED,this.deviceNum, pow]);
     }
 }
-
+*/
+/*
 function STEPPER(io, deviceNum) {
     this.io = io;
     this.deviceNum = deviceNum;
@@ -52,7 +126,41 @@ function STEPPER(io, deviceNum) {
         this.io.accelStepperSpeed(this.deviceNum, speed);
     }
 }
+*/
+function ACCELSTEPPER(io, stepPin, directionPin, enablePin, deviceNum) {
+    this.io = io;
+    this.deviceNum = deviceNum;
+    
+    this.io.accelStepperConfig({
+        deviceNum: this.deviceNum,
+        type: this.io.STEPPER.TYPE.DRIVER,
+        stepPin: stepPin,
+        directionPin: directionPin,
+        enablePin: enablePin
+    });
+    this.io.accelStepperSpeed(this.deviceNum, 180);
+    // this.io.accelStepperAcceleration(this.deviceNum, 0);
+    this.row0 = "paso a paso {0}".formatUnicorn(this.deviceNum+1);
+          
+    this.steps = function (steps, callback) {
+        this.io.accelStepperEnable(this.deviceNum, false);
+        this.io.accelStepperStep(this.deviceNum, steps, position => {
+            this.io.accelStepperEnable(this.deviceNum, true);
+            callback(position);
+        });
+        return {"message":[this.row0, "{0} pasos".formatUnicorn(steps)]}
+    }
+    this.stop = function () {
+        this.io.accelStepperStop(this.deviceNum);
+        return {"message":[this.row0, "detenido"]}
+    }
+    this.speed = function (speed) {
+        this.io.accelStepperSpeed(this.deviceNum, speed);
+        return {"message":[this.row0, "vel. {0} rpm".formatUnicorn(speed)]}
+    }
+}
 
+/*
 function SERVO(io, deviceNum) {
     this.io = io;
     this.deviceNum = deviceNum; 
@@ -63,15 +171,29 @@ function SERVO(io, deviceNum) {
         this.io.sysexCommand([SERVO_DATA,SERVO_WRITE,this.deviceNum, arrPos[0], arrPos[1] ]);
     }
 }
+*/
+function SERVOJ5(io, deviceNum) {
+    this.io = io;
+    this.deviceNum = deviceNum; 
+    this.row0 = "servo {0}".formatUnicorn(this.deviceNum+1);
+    this.position = function (pos) {
+        this.io.to(pos);
+        return {"message":[this.row0, "posicion {0}".formatUnicorn(pos)]}
+    }
+}
 
 function ANALOG(io, channel) {
     this.io = io;
     this.channel = channel;
+    this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
     this.on = function(callback) {
         this.io.analogRead(this.channel, callback);
+        return {"message":[this.row0, "reportando"]}
+
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
+        return {"message":[this.row0, "apagada"]}
     }
 }
 
@@ -111,6 +233,59 @@ function I2C(io, address) {
     }
 }
 
+function LCDPCF8574(io) {
+    this.io = io;
+    this.io.backlight().home().noBlink().noCursor().on();
+    this.handle = setTimeout(function(){}, 1);
+    this.timeout = 200;
+    this.enabled = true;
+    this.row0 = "display"
+    this.on = function() {
+        this.io.backlight().on();
+        this.enabled = true;
+        this.message([this.row0, "encendido"]);
+    }
+    this.off = function() {
+        this.io.noBacklight();
+        this.silence();
+    }
+    this.silence = function() {
+        this.enabled = false;
+        this.message([this.row0, "silenciado"], true);
+    }
+    this.clear = function() {
+        this.io.clear();
+    }
+    this.print = function(row, str) {
+        var col = Math.floor((16-(str.length))/2);
+        this.io.cursor(row,col).print(str);
+    }
+    this.setTimeout = function() {
+        var me = this;
+        if(!this.data) return;
+        data = this.data;
+        this.handle = setTimeout(function(){
+            if(data.length > 0) {
+                me.io.clear();
+                me.print(0, data[0])
+            }
+            if(data.length > 1) {
+                me.print(1, data[1])
+            }
+            me.data = false;
+        }, this.timeout);
+    }
+    this.clearTimeout = function() {
+        clearTimeout(this.handle);
+    }
+    this.message = function(data, force) {
+        if(!force && !this.enabled) return;
+        this.data = data;
+        this.setTimeout();
+    }
+} 
+
+/*
 function LCD(io) {
     this.io = io;
     this.print = function(row, str) {
@@ -139,15 +314,15 @@ function LCD(io) {
 
     }
 }
-
+*/
 module.exports = function (five) {
-    return (function() {
+    return (function(opts) {
   
-      function Interfaz(opts) {
+      function Interfaz() {
         if (!(this instanceof Interfaz)) {
           return new Interfaz(opts);
         }
-  
+
         // Board.Component
         //    - Register the component with an
         //      existing Board instance.
@@ -163,16 +338,53 @@ module.exports = function (five) {
         );
   
         
+        this._dc = new Array();
+        this._servos = new Array();
+        this._steppers = new Array();
+        this._i2cs = new Array();
+        this._lcd = new LCDPCF8574(new five.LCD({
+            controller: "PCF8574",
+            address:  0x27,
+            bus: 2,
+            rows: 2,
+            cols: 16
+        }));
+        
+    }
+    
+    Interfaz.prototype.init = function(opts) {
         // Define Component initialization
-        this._dc = [new DC(this.io, 0),new DC(this.io, 1),new DC(this.io, 2),new DC(this.io, 3),new DC(this.io, 4),new DC(this.io, 5),new DC(this.io, 6),new DC(this.io, 7)];
-        this._steppers = [new STEPPER(this.io, 0),new STEPPER(this.io, 1),new STEPPER(this.io, 2)];
-        this._servos = [new SERVO(this.io, 0),new SERVO(this.io, 1),new SERVO(this.io, 2)];
-        this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
-        this._digitals = [new DIGITAL(this.io, 64), new DIGITAL(this.io, 65), new DIGITAL(this.io, 66), new DIGITAL(this.io, 67), new DIGITAL(this.io, 68), new DIGITAL(this.io, 69)];
-        this._i2cs = [];
-        this._lcd = new LCD(this.io);
-  
-      }
+        switch(opts.model) {
+            case "uno":
+                var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
+                this._dc.push(new DCL293(new five.Motor(configs.M1), 0));
+                this._dc.push(new DCL293(new five.Motor(configs.M2), 1));
+                this._dc.push(new DCL293(new five.Motor(configs.M3), 2));
+                this._dc.push(new DCL293(new five.Motor(configs.M4), 3));
+                this._servos.push(new SERVOJ5(new five.Servo(9), 0));
+                this._servos.push(new SERVOJ5(new five.Servo(10), 1));
+                this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3)];
+            break;
+            case "mega":
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:2,dir:22,cdir:23}}), 0));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:3,dir:24,cdir:25}}), 1));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:4,dir:26,cdir:27}}), 2));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:5,dir:28,cdir:29}}), 3));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:6,dir:30,cdir:31}}), 4));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:7,dir:32,cdir:33}}), 5));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:8,dir:34,cdir:35}}), 6));
+                this._dc.push(new DCL293(new five.Motor({pins: {pwm:9,dir:36,cdir:37}}), 7));
+                this._servos.push(new SERVOJ5(new five.Servo(10), 0));
+                this._servos.push(new SERVOJ5(new five.Servo(11), 1));
+                this._servos.push(new SERVOJ5(new five.Servo(12), 2));
+                this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
+                this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
+                this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
+                this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
+                this._digitals = [new DIGITAL(this.io, 64), new DIGITAL(this.io, 65), new DIGITAL(this.io, 66), new DIGITAL(this.io, 67), new DIGITAL(this.io, 68), new DIGITAL(this.io, 69)];
+            break;
+        }
+    }
   
         Interfaz.prototype.output = function (index) {
             if (index < 1) return this._dc[0];
