@@ -189,7 +189,7 @@ function ANALOG(io, channel) {
     this.on = function(callback) {
         this.io.analogRead(this.channel, callback);
         return {"message":[this.row0, "reportando"]}
-
+        
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
@@ -197,20 +197,26 @@ function ANALOG(io, channel) {
     }
 }
 
-function DIGITAL(io, pin) {
+function DIGITAL(io, pin, channel) {
     this.io = io;
     this.pin = pin;
+    this.channel = channel;
     this.mode = this.io.MODES.INPUT;
+    this.row0 = "ent. digital {0}".formatUnicorn(this.channel + 1);
     this.on = function (callback) {
         this.io.pinMode(this.pin, this.mode);
         this.io.digitalRead(this.pin, callback);
+        return {"message":[this.row0, "reportando"]}
     }
     this.pullup = function (enabled) {
         this.mode = (enabled) ? this.io.MODES.PULLUP : this.io.MODES.INPUT;
         this.io.pinMode(this.pin, this.mode);
+        return {"message":[this.row0, "pullup"]}
     }
     this.off = function () { 
         this.io.reportDigitalPin(this.pin, 0);
+        return {"message":[this.row0, "apagada"]}
+
     }    
 }
 
@@ -381,7 +387,7 @@ module.exports = function (five) {
                 this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
                 this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
                 this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
-                this._digitals = [new DIGITAL(this.io, 64), new DIGITAL(this.io, 65), new DIGITAL(this.io, 66), new DIGITAL(this.io, 67), new DIGITAL(this.io, 68), new DIGITAL(this.io, 69)];
+                this._digitals = [new DIGITAL(this.io, 64, 0), new DIGITAL(this.io, 65, 1), new DIGITAL(this.io, 66, 2), new DIGITAL(this.io, 67, 3), new DIGITAL(this.io, 68, 4), new DIGITAL(this.io, 69, 5)];
             break;
         }
     }
