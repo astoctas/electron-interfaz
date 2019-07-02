@@ -1,4 +1,4 @@
-const { app, Menu, Tray, BrowserWindow, nativeImage } = require('electron');
+const { app, Menu, Tray, BrowserWindow, nativeImage, globalShortcut} = require('electron');
 // Module to control application life.
 //const app = electron.app
 // Module to create native browser window.
@@ -20,6 +20,11 @@ let tray = null
 let mainWindow
 
 function createWindow () {
+
+  globalShortcut.register('CommandOrControl+T', () => {
+    mainWindow.webContents.openDevTools()
+  })
+
   // Create the browser window.
   mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false,
     icon: path.join(__dirname, 'resources','interfaz.png')

@@ -1,6 +1,6 @@
 {
   "name": "interfaz-link",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "An interfaz link Electron application",
   "main": "main.js",
   "scripts": {
@@ -8,6 +8,8 @@
     "install": "electron-rebuild",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "pack-win": "build --dir --win",
+    "dist-win": "build --win",    
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {

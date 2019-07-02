@@ -69,12 +69,12 @@ var ifaz;
 var instances = new Array();
 var reconnectFlag = false;
 
-function start(port, model) {
-  ifaz = new Interfaz();
-  ifaz.init({model: model});
+function start(board, model) {
+  ifaz = new Interfaz(board);
+  model = ifaz.init({model: model});
   window.localStorage.setItem("model", model);
   var lcd = ifaz.lcd();
-  lcd.message(["Conectado en",port]);
+  lcd.message(["Conectado en",board.port]);
 
 
 }
@@ -96,7 +96,7 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('INTERFAZ', function (data) {
     if(typeof board != "undefined") {
-      start(board.port, data.model);
+      start(board, data.model);
     }
   })
 
@@ -299,10 +299,11 @@ function connect(port) {
   board.on("ready", function () {
     console.log(board);
     // TEST var led = new five.Led(13);led.blink();
+    defaultModel = "";
     if(window.localStorage.getItem("model") != "null") {
       defaultModel = window.localStorage.getItem("model");
-      start(board.port, defaultModel);
-    }    
+    } 
+    start(board, defaultModel);
     console.log("ready!");
     var msg = document.getElementById("disconnected-msg");
     msg.style.display = "none";

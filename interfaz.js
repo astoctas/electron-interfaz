@@ -199,10 +199,10 @@ function ANALOG(io, channel) {
 
 function DIGITAL(io, pin, channel) {
     this.io = io;
-    this.pin = pin;
     this.channel = channel;
+    this.pin = pin;
     this.mode = this.io.MODES.INPUT;
-    this.row0 = "ent. digital {0}".formatUnicorn(this.channel + 1);
+    this.row0 = "entrada digital {0}".formatUnicorn(this.channel + 1);
     this.on = function (callback) {
         this.io.pinMode(this.pin, this.mode);
         this.io.digitalRead(this.pin, callback);
@@ -250,21 +250,26 @@ function LCDPCF8574(io) {
         this.io.backlight().on();
         this.enabled = true;
         this.message([this.row0, "encendido"]);
+        return {};
     }
     this.off = function() {
         this.io.noBacklight();
         this.silence();
+        return {};
     }
     this.silence = function() {
         this.enabled = false;
         this.message([this.row0, "silenciado"], true);
+        return {};
     }
     this.clear = function() {
         this.io.clear();
+        return {};
     }
     this.print = function(row, str) {
         var col = Math.floor((16-(str.length))/2);
         this.io.cursor(row,col).print(str);
+        return {};
     }
     this.setTimeout = function() {
         var me = this;
@@ -283,11 +288,13 @@ function LCDPCF8574(io) {
     }
     this.clearTimeout = function() {
         clearTimeout(this.handle);
+        return {};
     }
     this.message = function(data, force) {
         if(!force && !this.enabled) return;
         this.data = data;
         this.setTimeout();
+        return {};
     }
 } 
 
@@ -324,7 +331,7 @@ function LCD(io) {
 module.exports = function (five) {
     return (function(opts) {
   
-      function Interfaz() {
+      function Interfaz(board) {
         if (!(this instanceof Interfaz)) {
           return new Interfaz(opts);
         }
@@ -343,7 +350,7 @@ module.exports = function (five) {
           this, opts = five.Board.Options(opts)
         );
   
-        
+        this.board = board;
         this._dc = new Array();
         this._servos = new Array();
         this._steppers = new Array();
@@ -360,8 +367,13 @@ module.exports = function (five) {
     
     Interfaz.prototype.init = function(opts) {
         // Define Component initialization
+        switch(this.board.type) {
+            case "UNO": opts.model = "uno"; break;
+            case "MEGA": opts.model = "mega"; break;
+        }
         switch(opts.model) {
             case "uno":
+                if(this.board.type != "UNO") return;
                 var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
                 this._dc.push(new DCL293(new five.Motor(configs.M1), 0));
                 this._dc.push(new DCL293(new five.Motor(configs.M2), 1));
@@ -370,8 +382,9 @@ module.exports = function (five) {
                 this._servos.push(new SERVOJ5(new five.Servo(9), 0));
                 this._servos.push(new SERVOJ5(new five.Servo(10), 1));
                 this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3)];
-            break;
-            case "mega":
+                break;
+                case "mega":
+                    if(this.board.type != "MEGA") return;
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:2,dir:22,cdir:23}}), 0));
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:3,dir:24,cdir:25}}), 1));
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:4,dir:26,cdir:27}}), 2));
@@ -388,8 +401,9 @@ module.exports = function (five) {
                 this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
                 this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
                 this._digitals = [new DIGITAL(this.io, 64, 0), new DIGITAL(this.io, 65, 1), new DIGITAL(this.io, 66, 2), new DIGITAL(this.io, 67, 3), new DIGITAL(this.io, 68, 4), new DIGITAL(this.io, 69, 5)];
-            break;
-        }
+                break;
+            }
+            return opts.model;
     }
   
         Interfaz.prototype.output = function (index) {
