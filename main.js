@@ -21,6 +21,8 @@ let mainWindow
 
 function createWindow () {
 
+  app.setAppUserModelId("ar.com.interfazrobotica"); // set appId from package.json
+
   globalShortcut.register('CommandOrControl+T', () => {
     mainWindow.webContents.openDevTools()
   })

@@ -374,6 +374,11 @@ module.exports = function (five) {
         switch(opts.model) {
             case "uno":
                 if(this.board.type != "UNO") return;
+                this.MAXOUTPUTS = 4;
+                this.MAXSTEPPERS = 0;
+                this.MAXSERVOS = 2;
+                this.MAXANALOGS = 4;
+                this.MAXDIGITAL = 0;
                 var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
                 this._dc.push(new DCL293(new five.Motor(configs.M1), 0));
                 this._dc.push(new DCL293(new five.Motor(configs.M2), 1));
@@ -385,7 +390,12 @@ module.exports = function (five) {
                 break;
                 case "mega":
                     if(this.board.type != "MEGA") return;
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:2,dir:22,cdir:23}}), 0));
+                    this.MAXOUTPUTS = 8;
+                    this.MAXSTEPPERS = 3;
+                    this.MAXSERVOS = 3;
+                    this.MAXANALOGS = 8;
+                    this.MAXDIGITAL = 6;
+                    this._dc.push(new DCL293(new five.Motor({pins: {pwm:2,dir:22,cdir:23}}), 0));
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:3,dir:24,cdir:25}}), 1));
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:4,dir:26,cdir:27}}), 2));
                 this._dc.push(new DCL293(new five.Motor({pins: {pwm:5,dir:28,cdir:29}}), 3));
@@ -408,27 +418,27 @@ module.exports = function (five) {
   
         Interfaz.prototype.output = function (index) {
             if (index < 1) return this._dc[0];
-            if (index > 8) return this._dc[7];
+            if (index > this.MAXOUTPUTS) return this._dc[this.MAXOUTPUTS - 1];
             return this._dc[index - 1];
         }
         Interfaz.prototype.stepper = function (index) {
             if (index < 1) return this._steppers[0];
-            if (index > 3) return this._steppers[2];
+            if (index > this.MAXSTEPPERS) return this._steppers[this.MAXSTEPPERS - 1];
             return this._steppers[index - 1];
         }
         Interfaz.prototype.servo = function (index) {
             if (index < 1) return this._servos[0];
-            if (index > 3) return this._servos[2];
+            if (index > this.MAXSERVOS) return this._servos[this.MAXSERVOS - 1];
             return this._servos[index - 1];
         }
         Interfaz.prototype.analog = function (index) {
             if (index < 1) return this._analogs[0];
-            if (index > 8) return this._analogs[7];
+            if (index > this.MAXANALOGS) return this._analogs[this.MAXANALOGS - 1];
             return this._analogs[index - 1];
         }
         Interfaz.prototype.digital = function (index) {
             if (index < 1) return this._digitals[0];
-            if (index > 6) return this._digitals[5];
+            if (index > this.MAXDIGITAL) return this._digitals[this.MAXDIGITAL - 1];
             return this._digitals[index - 1];
         }
         Interfaz.prototype.i2c = function (address, delay) {
@@ -442,7 +452,6 @@ module.exports = function (five) {
         Interfaz.prototype.lcd = function() {
             return this._lcd;
         }
-         
   
       return Interfaz;
     }());

@@ -9,13 +9,17 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "pack-win": "build --dir --win",
-    "dist-win": "build --win",    
+    "dist-win": "build --win",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "interfaz.nh",
+    "appId": "ar.com.interfazrobotica",
     "productName": "Interfaz Link",
-    "files": ["**/*", "resources/", "build/interfaz.png"] 
+    "files": [
+      "**/*",
+      "resources/",
+      "build/interfaz.png"
+    ]
   },
   "repository": {
     "type": "git",
@@ -36,6 +40,7 @@
   "dependencies": {
     "data-table": "^2.0.0",
     "electron-reload": "^1.4.0",
+    "framework7": "^4.4.6",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "johnny-five": "^1.1.0",

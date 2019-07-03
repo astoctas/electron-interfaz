@@ -16,6 +16,7 @@ var ifaces = os.networkInterfaces();
 //const { VM } = require('vm2');
 
 var ips = new Array();
+var notificationTitle = "Interfaz Robótica";
 
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -76,6 +77,9 @@ function start(board, model) {
   var lcd = ifaz.lcd();
   lcd.message(["Conectado en",board.port]);
 
+  let myNotification = new Notification(notificationTitle, {
+    body: 'Interfaz conectada en '+board.port
+  })
 
 }
 /*
@@ -321,6 +325,9 @@ function connect(port) {
       msg.style.display = "block";
       connectBtn.disabled = false;        
       reconnectFlag = true;   
+      let myNotification = new Notification(notificationTitle, {
+        body: 'Interfaz desconectada'
+      })      
       scanPorts();
     })
   
