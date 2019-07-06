@@ -7,16 +7,20 @@ const createTable = require('data-table');
 var app = require('http').createServer(handler)
 var io = require('socket.io').listen(app, { origins: '*:*' });
 var fs = require('fs');
-
 var five = require('johnny-five');
 var Interfaz = require("./interfaz")(five);
-
 var os = require('os');
 var ifaces = os.networkInterfaces();
 //const { VM } = require('vm2');
+var $ = require("jquery");
 
 var ips = new Array();
 var notificationTitle = "Interfaz Robótica";
+M.AutoInit();
+
+/* WEB SERVER */
+var socketPort = 4268;
+app.listen(socketPort);
 
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -39,16 +43,10 @@ Object.keys(ifaces).forEach(function (ifname) {
   });
 });
 
+$("#socket-msg").html("Socket abierto en: <br/>127.0.0.1:"+socketPort);
 
-/* WEB SERVER */
-var socketPort = 4268;
-app.listen(socketPort);
-
-var msg = document.getElementById("socket-msg");
-msg.innerHTML = "Socket abierto en: ";
-msg.innerHTML += "<br/>127.0.0.1:"+socketPort;
 ips.forEach(function(i,v){
-  msg.innerHTML += "<br/>"+i+":"+socketPort;
+  $("#socket-msg").html($("#socket-msg").html() + "<br/>"+i+":"+socketPort);
 })
 
 
@@ -82,17 +80,7 @@ function start(board, model) {
   })
 
 }
-/*
-board = new five.Board({ 
-  repl: false
-});
-board.on("ready", function () {
-  var led = new five.Led(13);
-  led.blink();
-  start();
-});
 
-*/
 
 io.sockets.on('connection', function (socket) {
 
@@ -254,36 +242,49 @@ io.sockets.on('connection', function (socket) {
 
 })
 
-var sel = document.getElementById('select-ports');
+var $sel = $('#select-ports');
 
 function scanPorts() {
   serialport.list((err, ports) => {
     console.log('ports', ports);
     if (err) {
-      document.getElementById('error').textContent = err.message
+      $('#error').html(err.message);
       return
     } else {
-      document.getElementById('error').textContent = ''
+      $('#error').html('');
     }
   
     if (ports.length === 0) {
-      document.getElementById('error').textContent = 'No ports discovered'
+      $('#error').html("No se encontraron puertos");
     }
   
   
     const headers = Object.keys(ports[0])
-    const table = createTable(headers)
-    tableHTML = ''
-    table.on('data', data => tableHTML += data)
-    table.on('end', () => document.getElementById('ports').innerHTML = tableHTML)
+    $sel.empty();
+    $("#ports").empty();
+    var _table = $("<table/>").appendTo("#ports");
+    var thead = $("<thead>").appendTo(_table);
+    var row = $("<tr/>");
+    headers.forEach(r => {
+      row.append($("<th>").text(r));
+    });
+    thead.append(row);
+    
+    var tbody = $("<tbody>").appendTo(_table);
     ports.forEach(port => {
-      var option = document.createElement("option");
-      option.innerHTML = port.comName;
-      option.value = port.comName;
-      sel.appendChild(option);
-      table.write(port);
+      // TABLA
+      var row = $("<tr/>").appendTo(tbody);
+      Object.values(port).forEach(p => {
+        row.append($("<td>").text(p));
+      })
+
+      // SELECT
+      $sel.append($('<option>', {
+        text: port.comName,
+        value: port.comName
+      }));
     })
-    table.end();
+    M.FormSelect.init($('select'), {});  
   })
 }
 
@@ -295,8 +296,7 @@ function connect(port) {
 
   board.on("error", function (err) {
     console.log(board);
-    var msg = document.getElementById("error-msg");
-    msg.style.display = "block";
+    $("#error-msg").removeClass("hide");
     connectBtn.disabled = false;           
   })
   
@@ -309,21 +309,17 @@ function connect(port) {
     } 
     start(board, defaultModel);
     console.log("ready!");
-    var msg = document.getElementById("disconnected-msg");
-    msg.style.display = "none";
-    var msg = document.getElementById("connected-msg");
-    msg.style.display = "block";
+    $("#disconnected-msg").addClass("hide");
+    $("#connected-msg").removeClass("hide");
     //connectBtn.disabled = true;    
     reconnectFlag = false;
 
     if(board.io)
     board.io.transport.on("close", function (err) {
       console.log("desconectado!");
-      var msg = document.getElementById("connected-msg");
-      msg.style.display = "none";
-      var msg = document.getElementById("disconnected-msg");
-      msg.style.display = "block";
-      connectBtn.disabled = false;        
+      $("#connected-msg").addClass("hide");
+      $("#disconnected-msg").removeClass("hide");
+        connectBtn.disabled = false;        
       reconnectFlag = true;   
       let myNotification = new Notification(notificationTitle, {
         body: 'Interfaz desconectada'
@@ -351,7 +347,7 @@ if(window.localStorage.getItem("port") != "null") {
 
 var connectBtn = document.getElementById('connectBtn');
 connectBtn.addEventListener("click", function () {
-  window.localStorage.setItem("port", sel.value);
+  window.localStorage.setItem("port", $sel.val());
   window.location.reload();
 })
 
@@ -362,6 +358,7 @@ scanBtn.addEventListener("click", function () {
 
   setInterval(function() {
     if(reconnectFlag ) {
+      $("#loading").removeClass("hide");
       console.log("Intento de reconexión");
       defaultPort = window.localStorage.getItem("port");
       if(defaultPort) {

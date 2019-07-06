@@ -28,13 +28,13 @@ function createWindow () {
   })
 
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false,
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: false,
     icon: path.join(__dirname, 'resources','interfaz.png')
   })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
+    pathname: path.join(__dirname, 'src/index.html'),
     protocol: 'file:',
     slashes: true
   }))
@@ -50,12 +50,21 @@ function createWindow () {
     mainWindow = null
   })
 
+  mainWindow.on('close', function (event) {
+    if(!app.isQuiting){
+        event.preventDefault();
+        mainWindow.hide();
+    }
+
+    return false;
+});
+
 var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'build/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
   tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
+    { label: 'Salir', type: 'normal', click:  function() {app.isQuiting = true;app.quit()} }
   ])
   tray.setToolTip('Interfaz Link')
   tray.setContextMenu(contextMenu)
