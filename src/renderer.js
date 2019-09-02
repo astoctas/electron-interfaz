@@ -83,6 +83,7 @@ function start(board, model) {
 
 
 io.sockets.on('connection', function (socket) {
+  console.log(socket)
 
   socket.emit("SOCKET_CONNECTED");
 
