@@ -8,8 +8,8 @@
     "install": "electron-rebuild",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "pack-win": "build --dir --win",
-    "dist-win": "build --win",
+    "pack-win": "build --dir --win --ia32",
+    "dist-win": "build --win --ia32",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
