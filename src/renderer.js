@@ -127,10 +127,21 @@ io.sockets.on('connection', function (socket) {
     ifaz.lcd().clearTimeout();
     var result = ifaz.analog(data.index)[data.method](function (result) {
       socket.emit('ANALOG_MESSAGE', { index: data.index, value: result });
+      socket.emit('SENSOR_MESSAGE', { index: data.index, value: this.value, boolean: this.boolean });
     });
     if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
   })
   
+  socket.on('PING', function (data) {
+    if(typeof ifaz == "undefined") return;
+    ifaz.lcd().clearTimeout();
+    var obj = ifaz.ping(data.index);
+    obj[data.method](function (result) {
+      socket.emit('PING_MESSAGE', { index: data.index, cm: this.cm, inches: this.inches });
+    }, data.controller);
+    if(obj.hasOwnProperty("message")) ifaz.lcd().message(obj.message); else  ifaz.lcd().setTimeout();
+  })
+
   socket.on('DIGITAL', function (data) {
     if(typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
@@ -302,6 +313,7 @@ function connect(port) {
   })
   
   board.on("ready", function () {
+    console.log(five);
     console.log(board);
     // TEST var led = new five.Led(13);led.blink();
     defaultModel = "";

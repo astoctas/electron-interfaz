@@ -186,16 +186,35 @@ function ANALOG(io, channel) {
     this.io = io;
     this.channel = channel;
     this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
+    this.sensor = false;
     this.on = function(callback) {
         this.io.analogRead(this.channel, callback);
         return {"message":[this.row0, "reportando"]}
-        
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
         return {"message":[this.row0, "apagada"]}
     }
 }
+
+function SENSOR(five, io, channel) {
+    this.five = five;
+    this.io = io;
+    this.channel = channel;
+    this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
+    this.sensor = false;
+    this.on = function(callback) {
+        this.sensor = new five.Sensor("A"+this.channel);
+        this.sensor.on("change", callback);
+        return {"message":[this.row0, "reportando"]}
+    }
+    this.off = function () { 
+        this.io.reportAnalogPin(this.channel, 0);
+        this.sensor.removeAllListeners();
+        return {"message":[this.row0, "apagada"]}
+    }
+}
+
 
 function DIGITAL(io, pin, channel) {
     this.io = io;
@@ -298,6 +317,26 @@ function LCDPCF8574(io) {
     }
 } 
 
+function PING(five, channel, controller) {
+    this.five = five;
+    this.channel = channel;
+    this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
+    this.sensor = false;
+    this.on = function(callback) {
+        if(this.sensor) this.sensor.removeAllListeners();
+        this.sensor = new five.Proximity({
+            controller: controller,
+            pin: "A"+this.channel
+          });
+        this.sensor.on("change", callback);
+        return {"message":[this.row0, "ultrasonido"]}
+    }
+    this.off = function () { 
+        this.sensor.removeAllListeners();
+    }
+
+}
+
 /*
 function LCD(io) {
     this.io = io;
@@ -386,7 +425,9 @@ module.exports = function (five) {
                 this._dc.push(new DCL293(new five.Motor(configs.M4), 3));
                 this._servos.push(new SERVOJ5(new five.Servo(9), 0));
                 this._servos.push(new SERVOJ5(new five.Servo(10), 1));
-                this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3)];
+                //this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3)];
+                this._analogs = [new SENSOR(five, this.io, 0),new SENSOR(five, this.io, 1),new SENSOR(five, this.io, 2),new SENSOR(five, this.io, 3)];
+                this._pings = new Array();
                 break;
                 case "mega":
                     if(this.board.type != "MEGA") return;
@@ -406,13 +447,16 @@ module.exports = function (five) {
                 this._servos.push(new SERVOJ5(new five.Servo(10), 0));
                 this._servos.push(new SERVOJ5(new five.Servo(11), 1));
                 this._servos.push(new SERVOJ5(new five.Servo(12), 2));
-                this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
+                //this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
+                this._analogs = [new SENSOR(five, this.io, 0),new SENSOR(five, this.io, 1),new SENSOR(five, this.io, 2),new SENSOR(five, this.io, 3),new SENSOR(five, this.io, 4),new SENSOR(five, this.io, 5),new SENSOR(five, this.io, 6),new SENSOR(five, this.io, 7)];
                 this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
                 this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
                 this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
                 this._digitals = [new DIGITAL(this.io, 64, 0), new DIGITAL(this.io, 65, 1), new DIGITAL(this.io, 66, 2), new DIGITAL(this.io, 67, 3), new DIGITAL(this.io, 68, 4), new DIGITAL(this.io, 69, 5)];
+                this._pings = new Array();
                 break;
             }
+            console.log(this);
             return opts.model;
     }
   
@@ -451,6 +495,15 @@ module.exports = function (five) {
         }
         Interfaz.prototype.lcd = function() {
             return this._lcd;
+        }
+        Interfaz.prototype.ping = function (index, controller) {
+            if (index < 1) index = 0;
+            if (index > this.MAXANALOGS) index = this.MAXANALOGS - 1;
+            if(typeof controller == "undefined") controller = "HCSR04";
+            if(typeof this._pings[index] == "undefined") {
+                this._pings[index] = new PING(five, index, controller);
+            }
+            return this._pings[index];
         }
   
       return Interfaz;
