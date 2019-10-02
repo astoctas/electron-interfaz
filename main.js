@@ -28,7 +28,10 @@ function createWindow () {
   })
 
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: false, show: false,
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: false,         
+    webPreferences: {
+      nodeIntegration: true
+    },
     icon: path.join(__dirname, 'resources','interfaz.png')
   })
 
@@ -39,8 +42,9 @@ function createWindow () {
     slashes: true
   }))
 
+  
   // Open the DevTools.
- // mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
   
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -49,22 +53,31 @@ function createWindow () {
     // when you should delete the corresponding element.
     mainWindow = null
   })
-
+  
+  mainWindow.on('close', function (event) {
+        event.preventDefault();
+        mainWindow.hide();
+    })
+    
 var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'build/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
   tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([
+    { label: 'Abrir', type: 'normal', click:  function() {
+        mainWindow.show();
+      } 
+    },
     { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
   ])
   tray.setToolTip('Interfaz Link')
   tray.setContextMenu(contextMenu)
 
-  
+  /*
   tray.on('click', () => {
     mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show()
   })
-
+  */
 
 }
 
