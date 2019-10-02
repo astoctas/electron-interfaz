@@ -28,23 +28,23 @@ function createWindow () {
   })
 
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: false,         
-    webPreferences: {
-      nodeIntegration: true
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: false,
+    "web-preferences": { 
+      "page-visibility": true ,
+      backgroundThrottling: false
     },
     icon: path.join(__dirname, 'resources','interfaz.png')
   })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
+    pathname: path.join(__dirname, '/index.html'),
     protocol: 'file:',
     slashes: true
   }))
 
-  
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+ // mainWindow.webContents.openDevTools()
   
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -53,23 +53,28 @@ function createWindow () {
     // when you should delete the corresponding element.
     mainWindow = null
   })
-  
+
   mainWindow.on('close', function (event) {
+    if(!app.isQuiting){
         event.preventDefault();
         mainWindow.hide();
-    })
-    
+    }
+
+    return false;
+});
+
+
 var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'build/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
-  tray = new Tray(trayIcon)
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Abrir', type: 'normal', click:  function() {
-        mainWindow.show();
-      } 
-    },
-    { label: 'Salir', type: 'normal', click:  function() {app.quit()} }
-  ])
+tray = new Tray(trayIcon)
+const contextMenu = Menu.buildFromTemplate([
+{ label: 'Abrir', type: 'normal', click:  function() {
+  mainWindow.show();
+} 
+},
+{ label: 'Salir', type: 'normal', click:  function() {app.isQuiting = true; app.quit()} }
+])
   tray.setToolTip('Interfaz Link')
   tray.setContextMenu(contextMenu)
 
@@ -81,6 +86,8 @@ var trayIcon = nativeImage.createFromPath(iconPath);
 
 }
 
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-background-timer-throttling");
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
