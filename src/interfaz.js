@@ -419,14 +419,11 @@ module.exports = function (five) {
                 this.MAXANALOGS = 4;
                 this.MAXDIGITAL = 0;
                 var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
-                this._dc.push(new DCL293(new five.Motor(configs.M1), 0));
-                this._dc.push(new DCL293(new five.Motor(configs.M2), 1));
-                this._dc.push(new DCL293(new five.Motor(configs.M3), 2));
-                this._dc.push(new DCL293(new five.Motor(configs.M4), 3));
-                this._servos.push(new SERVOJ5(new five.Servo(9), 0));
-                this._servos.push(new SERVOJ5(new five.Servo(10), 1));
-                //this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3)];
-                this._analogs = [new SENSOR(five, this.io, 0),new SENSOR(five, this.io, 1),new SENSOR(five, this.io, 2),new SENSOR(five, this.io, 3)];
+                this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
+                this.servo_config = [9,10];
+                this.digital_config = [14,15,16,17];
+                this._servos = new Array(); 
+                this._analogs = new Array(); 
                 this._pings = new Array();
                 break;
                 case "mega":
@@ -436,24 +433,25 @@ module.exports = function (five) {
                     this.MAXSERVOS = 3;
                     this.MAXANALOGS = 8;
                     this.MAXDIGITAL = 6;
-                    this._dc.push(new DCL293(new five.Motor({pins: {pwm:2,dir:22,cdir:23}}), 0));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:3,dir:24,cdir:25}}), 1));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:4,dir:26,cdir:27}}), 2));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:5,dir:28,cdir:29}}), 3));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:6,dir:30,cdir:31}}), 4));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:7,dir:32,cdir:33}}), 5));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:8,dir:34,cdir:35}}), 6));
-                this._dc.push(new DCL293(new five.Motor({pins: {pwm:9,dir:36,cdir:37}}), 7));
-                this._servos.push(new SERVOJ5(new five.Servo(10), 0));
-                this._servos.push(new SERVOJ5(new five.Servo(11), 1));
-                this._servos.push(new SERVOJ5(new five.Servo(12), 2));
-                //this._analogs = [new ANALOG(this.io, 0),new ANALOG(this.io, 1),new ANALOG(this.io, 2),new ANALOG(this.io, 3),new ANALOG(this.io, 4),new ANALOG(this.io, 5),new ANALOG(this.io, 6),new ANALOG(this.io, 7)];
-                this._analogs = [new SENSOR(five, this.io, 0),new SENSOR(five, this.io, 1),new SENSOR(five, this.io, 2),new SENSOR(five, this.io, 3),new SENSOR(five, this.io, 4),new SENSOR(five, this.io, 5),new SENSOR(five, this.io, 6),new SENSOR(five, this.io, 7)];
-                this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
-                this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
-                this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
-                this._digitals = [new DIGITAL(this.io, 64, 0), new DIGITAL(this.io, 65, 1), new DIGITAL(this.io, 66, 2), new DIGITAL(this.io, 67, 3), new DIGITAL(this.io, 68, 4), new DIGITAL(this.io, 69, 5)];
-                this._pings = new Array();
+                    this.servo_config = [10,11,12];
+                    this.digital_config = [64,65,66,67,68,69];
+                    this.dc_config = [
+                        {pins: {pwm:2,dir:22,cdir:23}}, 
+                        {pins: {pwm:3,dir:24,cdir:25}}, 
+                        {pins: {pwm:4,dir:26,cdir:27}},
+                        {pins: {pwm:5,dir:28,cdir:29}},
+                        {pins: {pwm:6,dir:30,cdir:31}},
+                        {pins: {pwm:7,dir:32,cdir:33}},
+                        {pins: {pwm:8,dir:34,cdir:35}},                  
+                        {pins: {pwm:9,dir:36,cdir:37}}                        
+                    ];
+                    this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
+                    this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
+                    this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
+                    this._servos = new Array();
+                    this._analogs = new Array();
+                    this._digitals =new Array(); 
+                    this._pings = new Array();
                 break;
             }
             console.log(this);
@@ -461,8 +459,11 @@ module.exports = function (five) {
     }
   
         Interfaz.prototype.output = function (index) {
-            if (index < 1) return this._dc[0];
-            if (index > this.MAXOUTPUTS) return this._dc[this.MAXOUTPUTS - 1];
+            if (index < 1) return index = 1;;
+            if (index > this.MAXOUTPUTS) return index = this.MAXOUTPUTS;
+            if(typeof this._dc[index-1] == "undefined") {
+                this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
+            }
             return this._dc[index - 1];
         }
         Interfaz.prototype.stepper = function (index) {
@@ -471,18 +472,32 @@ module.exports = function (five) {
             return this._steppers[index - 1];
         }
         Interfaz.prototype.servo = function (index) {
-            if (index < 1) return this._servos[0];
-            if (index > this.MAXSERVOS) return this._servos[this.MAXSERVOS - 1];
+            if (index < 1) return index = 0;
+            if (index > this.MAXSERVOS) return index = this.MAXSERVOS - 1;
+            if(typeof this._servos[index-1] == "undefined") {
+                this._servos[index-1] = new SERVOJ5(new five.Servo(this.servo_config[index-1]), index-1);
+            }
             return this._servos[index - 1];
         }
         Interfaz.prototype.analog = function (index) {
+            if (index < 1) index = 1;
+            if (index > this.MAXANALOGS) index = this.MAXANALOGS;
+            if(typeof this._analogs[index-1] == "undefined") {
+                this._analogs[index-1] = new SENSOR(five, this.io, index - 1);
+            }
+            return this._analogs[index-1];
+            /*
             if (index < 1) return this._analogs[0];
             if (index > this.MAXANALOGS) return this._analogs[this.MAXANALOGS - 1];
             return this._analogs[index - 1];
+            */
         }
         Interfaz.prototype.digital = function (index) {
-            if (index < 1) return this._digitals[0];
-            if (index > this.MAXDIGITAL) return this._digitals[this.MAXDIGITAL - 1];
+            if (index < 1) return index = 1;
+            if (index > this.MAXDIGITAL) return index = this.MAXDIGITAL;
+            if(typeof this._digitals[index-1] == "undefined") {
+                this._digitals[index-1] = new DIGITAL(this.io, this.digital_config[index-1], index-1);
+            }
             return this._digitals[index - 1];
         }
         Interfaz.prototype.i2c = function (address, delay) {
@@ -497,13 +512,13 @@ module.exports = function (five) {
             return this._lcd;
         }
         Interfaz.prototype.ping = function (index, controller) {
-            if (index < 1) index = 0;
-            if (index > this.MAXANALOGS) index = this.MAXANALOGS - 1;
+            if (index < 1) index = 1;
+            if (index > this.MAXANALOGS) index = this.MAXANALOGS;
             if(typeof controller == "undefined") controller = "HCSR04";
-            if(typeof this._pings[index] == "undefined") {
-                this._pings[index] = new PING(five, index, controller);
+            if(typeof this._pings[index-1] == "undefined") {
+                this._pings[index-1] = new PING(five, index-1, controller);
             }
-            return this._pings[index];
+            return this._pings[index-1];
         }
   
       return Interfaz;

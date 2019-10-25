@@ -38,14 +38,18 @@
     "electron-rebuild": "^1.8.5"
   },
   "dependencies": {
+    "connect": "^3.7.0",
+    "cors": "^2.8.5",
     "data-table": "^2.0.0",
     "electron-reload": "^1.4.0",
+    "express": "^4.17.1",
     "framework7": "^4.4.6",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "johnny-five": "^1.1.0",
     "jquery": "^3.4.1",
     "materialize-css": "^1.0.0",
+    "path": "^0.12.7",
     "serialport": "^7.1.5",
     "socket.io": "^2.2.0",
     "vm2": "^3.8.1"

@@ -3,9 +3,31 @@
 // All of the Node.js APIs are available in this process.
 
 const serialport = require('serialport')
-const createTable = require('data-table');
-var app = require('http').createServer(handler)
-var io = require('socket.io').listen(app, { origins: '*:*' });
+
+var http = require("http");
+var path = require('path');
+
+var express = require('express');
+var handler = express();
+var cors = require('cors')
+handler.use(cors({credentials: true, origin: true}));
+var app = http.Server(handler);
+
+//var io = require('socket.io').listen(app, { origins: '*:*' });
+var io = require('socket.io')(app, { origins: '*:*' });
+
+handler.get('/socket.io-client', function(req, res) {
+  var options = {
+      root: path.join(__dirname, '../')
+    }    
+  res.sendFile('./node_modules/socket.io-client/dist/socket.io.js', options)
+});
+
+
+/* WEB SERVER */
+var socketPort = 4268;
+app.listen(socketPort);
+
 var fs = require('fs');
 var five = require('johnny-five');
 var Interfaz = require("./interfaz")(five);
@@ -18,9 +40,6 @@ var ips = new Array();
 var notificationTitle = "Interfaz Robótica";
 M.AutoInit();
 
-/* WEB SERVER */
-var socketPort = 4268;
-app.listen(socketPort);
 
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -67,6 +86,8 @@ var board;
 var ifaz;
 var instances = new Array();
 var reconnectFlag = false;
+var lastData = {};
+var lastMessage = {};
 
 function start(board, model) {
   ifaz = new Interfaz(board);
@@ -81,6 +102,35 @@ function start(board, model) {
 
 }
 
+function repeatLastData(data, key, msgKey) {
+  var str = JSON.stringify(data);
+  var result = ((typeof lastData[key] != "undefined") &&  (str == lastData[key]));
+  lastData[key] =str;
+  if(result && msgKey) repeatMessage(msgKey);
+  return result;
+}
+
+function sendMessage(result,key) {
+  if(result.hasOwnProperty("message")) {
+    ifaz.lcd().message(result.message); 
+    lastMessage[key] = result.message;
+  } else  {
+    ifaz.lcd().setTimeout();
+  }
+}
+
+function repeatMessage(key) {
+  if(typeof lastMessage[key] != "undefined") {
+    ifaz.lcd().message(lastMessage[key]); 
+  }
+}
+
+function initMessage(data, key, msgKey) {
+  if(typeof ifaz == "undefined") return false;
+  if(repeatLastData(data, 'output', msgKey)) return false; 
+  ifaz.lcd().clearTimeout();  
+  return true;
+}
 
 io.sockets.on('connection', function (socket) {
   console.log(socket)
@@ -100,10 +150,10 @@ io.sockets.on('connection', function (socket) {
 
 
   socket.on('OUTPUT', function (data) {
-    if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    msgKey = 'output_'+data.method;
+    if(!initMessage(data, 'output', msgKey)) return;
     var result = ifaz.output(data.index)[data.method](data.param);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(result, msgKey);
   })
   
   socket.on('STEPPER', function (data) {

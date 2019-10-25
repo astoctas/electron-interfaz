@@ -1,4 +1,4 @@
-const { app, Menu, Tray, BrowserWindow, nativeImage, globalShortcut} = require('electron');
+const { app, Menu, Tray, BrowserWindow, nativeImage, globalShortcut, session} = require('electron');
 // Module to control application life.
 //const app = electron.app
 // Module to create native browser window.
