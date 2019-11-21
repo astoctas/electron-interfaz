@@ -1,20 +1,4 @@
-const Firmata = require("firmata");
-
-const DC_MESSAGE = 2;
-const DC_ON = 1;
-const DC_OFF = 2;
-const DC_BRAKE = 3;
-const DC_INVERSE = 4;
-const DC_DIR = 5;
-const DC_SPEED = 6;
-const FIRMATA_EXTENDED_ANALOG = 0x6F;
-const SERVO_DATA = 4;
-const SERVO_WRITE = 2;
-const LCD_DATA = 3;
-const LCD_PRINT = 0;
-const LCD_PUSH = 1;
-const LCD_CLEAR = 2;
-
+var pixel = require("./lib/pixel.js");
 
 String.prototype.formatUnicorn = String.prototype.formatUnicorn ||
 function () {
@@ -35,6 +19,50 @@ function () {
     return str;
 };
 
+
+function RastiCC(io, config, deviceNum) {
+    this.io = io;
+    this.deviceNum = deviceNum;
+    this.s1 = config[0];
+    this.s2 = config[1];
+    this.dir = 0;
+    this.mode = this.io.MODES.OUTPUT;
+    this.io.pinMode(this.s1, this.mode);
+    this.io.pinMode(this.s2, this.mode);
+    /*
+    this.speed = 255;
+    */
+    this.onif = function() {
+        console.log(this)
+        if(this.status) {
+            if(!this.dir) {
+                this.io.digitalWrite(this.s2, 1);
+                this.io.digitalWrite(this.s1, 0);
+            } else {
+                this.io.digitalWrite(this.s1, 1);
+                this.io.digitalWrite(this.s2, 0);
+            }
+        }
+    }
+    this.on = function() {
+        this.status = 1;
+        this.onif();
+    }
+    this.off = function() {
+        this.io.digitalWrite(this.s2, 0);
+        this.io.digitalWrite(this.s1, 0);
+        this.status = 0;
+    }
+    this.inverse = function() {
+        this.direction(!this.dir);
+    }
+    this.direction = function(dir) {
+        this.dir = dir;
+        this.onif();
+    }
+    this.power = function(pow) {
+    }
+}
 
 function DCL293(io, deviceNum) {
     this.io = io;
@@ -182,6 +210,7 @@ function SERVOJ5(io, deviceNum) {
     }
 }
 
+/*
 function ANALOG(io, channel) {
     this.io = io;
     this.channel = channel;
@@ -196,21 +225,40 @@ function ANALOG(io, channel) {
         return {"message":[this.row0, "apagada"]}
     }
 }
+*/
 
-function SENSOR(five, io, channel) {
+function PIN(io, deviceNum) {
+    this.io = io;
+    this.deviceNum = deviceNum;
+    this.on = function() {
+        this.io.high();
+    }
+    this.off = function() {
+        this.io.low();
+    }
+    this.write = function(value) {
+        this.io.io.pinMode(this.io.pin, 3);
+        this.io.io.analogWrite(this.io.pin, value)
+    }
+}
+
+function SENSOR(five, io, channel,pin) {
     this.five = five;
     this.io = io;
+    this.pin = pin;
     this.channel = channel;
     this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
     this.sensor = false;
+    this.mode = this.io.MODES.ANALOG;
     this.on = function(callback) {
+        this.io.pinMode(this.pin, this.mode);
         this.sensor = new five.Sensor("A"+this.channel);
         this.sensor.on("change", callback);
         return {"message":[this.row0, "reportando"]}
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
-        this.sensor.removeAllListeners();
+        if(this.sensor) this.sensor.removeAllListeners();
         return {"message":[this.row0, "apagada"]}
     }
 }
@@ -317,8 +365,9 @@ function LCDPCF8574(io) {
     }
 } 
 
-function PING(five, channel, controller) {
+function PING(five, channel, controller, io) {
     this.five = five;
+    this.io = io;
     this.channel = channel;
     this.row0 = "entrada {0}".formatUnicorn(this.channel+1);
     this.sensor = false;
@@ -332,7 +381,75 @@ function PING(five, channel, controller) {
         return {"message":[this.row0, "ultrasonido"]}
     }
     this.off = function () { 
+        this.io.reportAnalogPin(this.channel, 0);
         this.sensor.removeAllListeners();
+    }
+
+}
+
+function PIXEL(board, pin, index) {
+    this.board = board;
+    this.pin = pin;
+    this.index = index;
+    this.strip = false;
+    this.row0 = "pixel {0}".formatUnicorn(this.index);
+    this.create = function(length) {
+        this.length = length;
+        this.strip = new pixel.Strip({
+            data: this.pin,
+            length: this.length,
+            skip_firmware_check: true,
+            color_order: pixel.COLOR_ORDER.GRB,
+            board: this.board,
+            controller: "FIRMATA",
+        });        
+        console.log(this.strip);
+        return {"message":[this.row0, "creado"]}
+    }
+    this.pixel = function(i) {
+        return (this.strip) ?  this.strip.pixel(i-1) : false;
+    }
+    this.color = function(color, i) {
+        if(!this.strip) return;
+        if(i > 0) {
+            if(i > this.length) return;
+            var el = this.strip.pixel(i - 1);
+        } else {
+            var el = this.strip;
+        }
+        el.color(color);
+        this.strip.show();
+        return {"message":[this.row0, "color"]}
+    }
+    this.shift = function(offset, direction, wrap) {
+        if(!this.strip) return;
+        this.strip.shift(offset, direction, wrap);
+        this.strip.show();
+        return {"message":[this.row0, "desplazado"]}
+    }
+    this.on = function(i) {
+        if(!this.strip) return;
+        if(i > 0) {
+            if(i > this.length) return;
+            var el = this.strip.pixel(i - 1);
+        } else {
+            var el = this.strip;
+        }
+        el.color("white");
+        this.strip.show();
+        return {"message":[this.row0, "encendido"]}
+    }
+    this.off = function (i) { 
+        if(!this.strip) return;
+        if(i > 0) {
+            if(i > this.length) return;
+            var el = this.strip.pixel(i - 1);
+        } else {
+            var el = this.strip;
+        }
+        el.off();
+        this.strip.show();
+        return {"message":[this.row0, "apagado"]}
     }
 
 }
@@ -409,7 +526,9 @@ module.exports = function (five) {
         switch(this.board.type) {
             case "UNO": opts.model = "uno"; break;
             case "MEGA": opts.model = "mega"; break;
+            case "OTHER": opts.model = "rasti"; break;
         }
+        this.opts = opts;
         switch(opts.model) {
             case "uno":
                 if(this.board.type != "UNO") return;
@@ -417,62 +536,95 @@ module.exports = function (five) {
                 this.MAXSTEPPERS = 0;
                 this.MAXSERVOS = 2;
                 this.MAXANALOGS = 4;
-                this.MAXDIGITAL = 0;
+                this.MAXDIGITAL = 4;
+                this.MAXPIXELS = 2;
                 var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
                 this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
                 this.servo_config = [9,10];
+                this.analog_config = [14,15,16,17];
                 this.digital_config = [14,15,16,17];
+                this.pixels_config = [9,10];
                 this._servos = new Array(); 
                 this._analogs = new Array(); 
+                this._digitals = new Array();
+                this._pings = new Array();
+                this._pixels = new Array();
+            break;
+            case "mega":
+                if(this.board.type != "MEGA") return;
+                this.MAXOUTPUTS = 8;
+                this.MAXSTEPPERS = 3;
+                this.MAXSERVOS = 3;
+                this.MAXANALOGS = 8;
+                this.MAXDIGITAL = 6;
+                this.servo_config = [10,11,12];
+                this.digital_config = [64,65,66,67,68,69];
+                this.dc_config = [
+                    {pins: {pwm:2,dir:22,cdir:23}}, 
+                    {pins: {pwm:3,dir:24,cdir:25}}, 
+                    {pins: {pwm:4,dir:26,cdir:27}},
+                    {pins: {pwm:5,dir:28,cdir:29}},
+                    {pins: {pwm:6,dir:30,cdir:31}},
+                    {pins: {pwm:7,dir:32,cdir:33}},
+                    {pins: {pwm:8,dir:34,cdir:35}},                  
+                    {pins: {pwm:9,dir:36,cdir:37}}                        
+                ];
+                this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
+                this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
+                this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
+                this._servos = new Array();
+                this._analogs = new Array();
+                this._digitals =new Array(); 
                 this._pings = new Array();
                 break;
-                case "mega":
-                    if(this.board.type != "MEGA") return;
-                    this.MAXOUTPUTS = 8;
-                    this.MAXSTEPPERS = 3;
-                    this.MAXSERVOS = 3;
-                    this.MAXANALOGS = 8;
-                    this.MAXDIGITAL = 6;
-                    this.servo_config = [10,11,12];
-                    this.digital_config = [64,65,66,67,68,69];
+                case "rasti":
+                    this.MAXANALOGS = 6;
+                    this.MAXDIGITAL = 4;
+                    this.MAXPINS = 4;
+                    this.MAXOUTPUTS = 2;
+                    this.MAXSERVOS = 2;
+                    this.MAXPIXELS = 4;
+                    this.digital_config = [9,10,11,12];
+                    this.analog_config = [14,15,16,17];
+                    this.pixels_config = [9,10,11,12];
                     this.dc_config = [
-                        {pins: {pwm:2,dir:22,cdir:23}}, 
-                        {pins: {pwm:3,dir:24,cdir:25}}, 
-                        {pins: {pwm:4,dir:26,cdir:27}},
-                        {pins: {pwm:5,dir:28,cdir:29}},
-                        {pins: {pwm:6,dir:30,cdir:31}},
-                        {pins: {pwm:7,dir:32,cdir:33}},
-                        {pins: {pwm:8,dir:34,cdir:35}},                  
-                        {pins: {pwm:9,dir:36,cdir:37}}                        
-                    ];
-                    this._steppers.push(new ACCELSTEPPER(this.io, 38, 39, 40, 0));
-                    this._steppers.push(new ACCELSTEPPER(this.io, 41, 42, 43, 1));
-                    this._steppers.push(new ACCELSTEPPER(this.io, 44, 45, 46, 2));
+                        [6,7],
+                        [4,5]
+                    ]
+                    this.pins_config = [9,10,11,12];
+                    this.servo_config = [9,10,11,12];
                     this._servos = new Array();
                     this._analogs = new Array();
-                    this._digitals =new Array(); 
+                    this._digitals = new Array();
+                    this._pins = new Array();
                     this._pings = new Array();
-                break;
-            }
-            console.log(this);
+                    this._pixels = new Array();
+            break;
+        }
+           console.log(this);
             return opts.model;
     }
   
         Interfaz.prototype.output = function (index) {
-            if (index < 1) return index = 1;;
+            if (index < 1)  index = 1;
             if (index > this.MAXOUTPUTS) return index = this.MAXOUTPUTS;
             if(typeof this._dc[index-1] == "undefined") {
-                this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
+                if(this.opts.model == "rasti") {
+                    this._dc[index-1] = new RastiCC(this.io, this.dc_config[index-1], index-1);
+                } else {
+                    this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
+                }
             }
             return this._dc[index - 1];
         }
+
         Interfaz.prototype.stepper = function (index) {
             if (index < 1) return this._steppers[0];
             if (index > this.MAXSTEPPERS) return this._steppers[this.MAXSTEPPERS - 1];
             return this._steppers[index - 1];
         }
         Interfaz.prototype.servo = function (index) {
-            if (index < 1) return index = 0;
+            if (index < 1) index = 0;
             if (index > this.MAXSERVOS) return index = this.MAXSERVOS - 1;
             if(typeof this._servos[index-1] == "undefined") {
                 this._servos[index-1] = new SERVOJ5(new five.Servo(this.servo_config[index-1]), index-1);
@@ -482,8 +634,9 @@ module.exports = function (five) {
         Interfaz.prototype.analog = function (index) {
             if (index < 1) index = 1;
             if (index > this.MAXANALOGS) index = this.MAXANALOGS;
+          
             if(typeof this._analogs[index-1] == "undefined") {
-                this._analogs[index-1] = new SENSOR(five, this.io, index - 1);
+                    this._analogs[index-1] = new SENSOR(five, this.io, index - 1, this.analog_config[index-1]);
             }
             return this._analogs[index-1];
             /*
@@ -493,13 +646,26 @@ module.exports = function (five) {
             */
         }
         Interfaz.prototype.digital = function (index) {
-            if (index < 1) return index = 1;
+            if (index < 1)  index = 1;
             if (index > this.MAXDIGITAL) return index = this.MAXDIGITAL;
             if(typeof this._digitals[index-1] == "undefined") {
                 this._digitals[index-1] = new DIGITAL(this.io, this.digital_config[index-1], index-1);
             }
             return this._digitals[index - 1];
         }
+
+        Interfaz.prototype.pin = function (index) {
+            if (index < 1)  index = 1;
+            if (index > this.MAXPINS) return index = this.MAXPINS;
+            if(typeof this._pins[index-1] == "undefined") {
+                this._pins[index-1] = new PIN(new five.Pin(
+                    {
+                        pin: this.pins_config[index-1]
+                    }), index-1);
+            }
+            return this._pins[index - 1];
+        }
+
         Interfaz.prototype.i2c = function (address, delay) {
             if (typeof this._i2cs[address] == "undefined") {
                 this._i2cs[address] = new I2C(this.io, address);
@@ -516,9 +682,18 @@ module.exports = function (five) {
             if (index > this.MAXANALOGS) index = this.MAXANALOGS;
             if(typeof controller == "undefined") controller = "HCSR04";
             if(typeof this._pings[index-1] == "undefined") {
-                this._pings[index-1] = new PING(five, index-1, controller);
+                this._pings[index-1] = new PING(five, index-1, controller, this.io);
             }
             return this._pings[index-1];
+        }
+        
+        Interfaz.prototype.pixel = function (index, controller) {
+            if (index < 1) index = 1;
+            if (index > this.MAXPIXELS) index = this.MAXPIXELS;
+            if(typeof this._pixels[index-1] == "undefined") {
+                this._pixels[index-1] = new PIXEL(this.board, this.pixels_config[index-1], index);
+            }
+            return this._pixels[index-1];
         }
   
       return Interfaz;

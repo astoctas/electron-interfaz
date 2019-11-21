@@ -37,8 +37,10 @@ var ifaces = os.networkInterfaces();
 var $ = require("jquery");
 
 var ips = new Array();
-var notificationTitle = "Interfaz Robótica";
+var notificationTitle = "Interfaz ";
 M.AutoInit();
+
+var socketInstance = false;
 
 
 Object.keys(ifaces).forEach(function (ifname) {
@@ -96,6 +98,12 @@ function start(board, model) {
   var lcd = ifaz.lcd();
   lcd.message(["Conectado en",board.port]);
 
+  if(model == "rasti") {
+    notificationTitle += "Rasti";
+  } else {
+    notificationTitle += "Robótica";
+  }
+
   let myNotification = new Notification(notificationTitle, {
     body: 'Interfaz conectada en '+board.port
   })
@@ -111,6 +119,7 @@ function repeatLastData(data, key, msgKey) {
 }
 
 function sendMessage(result,key) {
+  if(typeof result != "object") return;
   if(result.hasOwnProperty("message")) {
     ifaz.lcd().message(result.message); 
     lastMessage[key] = result.message;
@@ -134,13 +143,14 @@ function initMessage(data, key, msgKey) {
 
 io.sockets.on('connection', function (socket) {
   console.log(socket)
+  socketInstance = socket;
 
   socket.emit("SOCKET_CONNECTED");
 
   socket.on('INTERFAZ', function (data) {
     if(typeof board != "undefined") {
       start(board, data.model);
-    }
+   }
   })
 
 
@@ -150,9 +160,18 @@ io.sockets.on('connection', function (socket) {
 
 
   socket.on('OUTPUT', function (data) {
+    console.log('OUTPUT', data);
     msgKey = 'output_'+data.method;
-    if(!initMessage(data, 'output', msgKey)) return;
+    if(data.method != "inverse")
+      if(!initMessage(data, 'output', msgKey)) return;
     var result = ifaz.output(data.index)[data.method](data.param);
+    sendMessage(result, msgKey);
+  })
+
+  socket.on('PIN', function (data) {
+    console.log('PIN', data);
+    msgKey = 'pin_'+data.method;
+    var result = ifaz.pin(data.index)[data.method](data.param);
     sendMessage(result, msgKey);
   })
   
@@ -186,10 +205,18 @@ io.sockets.on('connection', function (socket) {
     if(typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var obj = ifaz.ping(data.index);
-    obj[data.method](function (result) {
+    var result = obj[data.method](function (result) {
       socket.emit('PING_MESSAGE', { index: data.index, cm: this.cm, inches: this.inches });
     }, data.controller);
-    if(obj.hasOwnProperty("message")) ifaz.lcd().message(obj.message); else  ifaz.lcd().setTimeout();
+    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+  })
+  
+  socket.on('PIXEL', function (data) {
+    if(typeof ifaz == "undefined") return;
+    ifaz.lcd().clearTimeout();
+    var obj = ifaz.pixel(data.index);
+    var result = obj[data.method](data.param, data.param2, data.param3);
+    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
   })
 
   socket.on('DIGITAL', function (data) {
@@ -230,6 +257,9 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('DEVICE_REMOVE', function (data) {
     instances = instances.filter(i => i.id != data.id);
+    if (typeof ins== "object") {
+      ins.device.removeAllListeners();
+    }
   });
 
 
@@ -257,6 +287,7 @@ io.sockets.on('connection', function (socket) {
   })
 
   socket.on('DEVICE_EVENT', function (data, fn) {
+    if(typeof data == "string") data = JSON.parse(data);
     console.log(data);
     var ins = instances.filter(i => i.id == data.id).shift();
     if (typeof ins== "object") {
@@ -264,11 +295,11 @@ io.sockets.on('connection', function (socket) {
       ins.device.on(data.event, function () {
         results = {};
         try {
+          if(typeof data.attributes != "undefined")
           data.attributes.forEach((reg) => {
-            results[reg] = this[reg];
+            results[reg] = eval("this."+reg);
           })
-          //console.log(results)
-          socket.emit('DEVICE_MESSAGE', { event: data.event , id: data.id, data: results });
+          socket.emit('DEVICE_MESSAGE', { event: data.event , id: data.id, attributes: results });
         } catch (error) {
           console.log(error);
           if(typeof fn !="undefined") fn(false);
@@ -370,7 +401,9 @@ function connect(port) {
     if(window.localStorage.getItem("model") != "null") {
       defaultModel = window.localStorage.getItem("model");
     } 
-    start(board, defaultModel);
+    start(this, defaultModel);
+    if(socketInstance)
+      socketInstance.emit("INTERFAZ_CONNECTED");
     console.log("ready!");
     $("#disconnected-msg").addClass("hide");
     $("#connected-msg").removeClass("hide");
@@ -380,6 +413,9 @@ function connect(port) {
     if(board.io)
     board.io.transport.on("close", function (err) {
       console.log("desconectado!");
+      if(socketInstance) {
+        socketInstance.emit("DISCONNECTED_MESSAGE");
+      }
       $("#connected-msg").addClass("hide");
       $("#disconnected-msg").removeClass("hide");
         connectBtn.disabled = false;        
