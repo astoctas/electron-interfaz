@@ -28,7 +28,7 @@ function createWindow () {
   })
 
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: false,
+  mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: !app.isPackaged,
     "web-preferences": { 
       "page-visibility": true ,
       backgroundThrottling: false
@@ -64,7 +64,7 @@ function createWindow () {
 });
 
 
-var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'build/interfaz.png';
+var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'resources/interfaz.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
 tray = new Tray(trayIcon)

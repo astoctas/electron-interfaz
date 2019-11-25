@@ -35,7 +35,7 @@
     "electron": "^4.0.0",
     "electron-builder": "^20.43.0",
     "electron-packager": "^13.1.1",
-    "electron-rebuild": "^1.8.5"
+    "electron-rebuild": "^1.8.8"
   },
   "dependencies": {
     "connect": "^3.7.0",

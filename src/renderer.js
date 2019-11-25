@@ -384,7 +384,8 @@ function scanPorts() {
 function connect(port) {
   board = new five.Board({
     port: port,
-    repl: false
+    repl: false,
+    timeout: 60000
   });
 
   board.on("error", function (err) {
