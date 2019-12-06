@@ -20,27 +20,18 @@ function () {
 };
 
 
-function RastiCC(io, config, deviceNum) {
+function RastiCC(io, deviceNum) {
     this.io = io;
-    this.deviceNum = deviceNum;
-    this.s1 = config[0];
-    this.s2 = config[1];
     this.dir = 0;
-    this.mode = this.io.MODES.OUTPUT;
-    this.io.pinMode(this.s1, this.mode);
-    this.io.pinMode(this.s2, this.mode);
-    /*
-    this.speed = 255;
-    */
+    this.speed = 128;
+    this.status = 0;
+    this.deviceNum = deviceNum;
     this.onif = function() {
-        console.log(this)
         if(this.status) {
             if(!this.dir) {
-                this.io.digitalWrite(this.s2, 1);
-                this.io.digitalWrite(this.s1, 0);
+                this.io.forward(this.speed);
             } else {
-                this.io.digitalWrite(this.s1, 1);
-                this.io.digitalWrite(this.s2, 0);
+                this.io.reverse(this.speed);
             }
         }
     }
@@ -49,8 +40,7 @@ function RastiCC(io, config, deviceNum) {
         this.onif();
     }
     this.off = function() {
-        this.io.digitalWrite(this.s2, 0);
-        this.io.digitalWrite(this.s1, 0);
+        this.io.stop();
         this.status = 0;
     }
     this.inverse = function() {
@@ -61,6 +51,8 @@ function RastiCC(io, config, deviceNum) {
         this.onif();
     }
     this.power = function(pow) {
+        this.speed = pow;
+        this.onif();
     }
 }
 
@@ -507,6 +499,7 @@ module.exports = function (five) {
         );
   
         this.board = board;
+        this.io = this.board.io;
         this._dc = new Array();
         this._servos = new Array();
         this._steppers = new Array();
@@ -588,8 +581,8 @@ module.exports = function (five) {
                     this.analog_config = [14,15,16,17];
                     this.pixels_config = [9,10,11,12];
                     this.dc_config = [
-                        [6,7],
-                        [4,5]
+                        {pins: {pwm:5,dir:4}, invertPWM: true}, 
+                        {pins: {pwm:6,dir:7}, invertPWM: true}
                     ]
                     this.pins_config = [9,10,11,12];
                     this.servo_config = [9,10,11,12];
@@ -610,7 +603,7 @@ module.exports = function (five) {
             if (index > this.MAXOUTPUTS) return index = this.MAXOUTPUTS;
             if(typeof this._dc[index-1] == "undefined") {
                 if(this.opts.model == "rasti") {
-                    this._dc[index-1] = new RastiCC(this.io, this.dc_config[index-1], index-1);
+                    this._dc[index-1] = new RastiCC(new five.Motor(this.dc_config[index-1]), index-1);
                 } else {
                     this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
                 }

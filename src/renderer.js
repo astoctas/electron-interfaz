@@ -10,16 +10,16 @@ var path = require('path');
 var express = require('express');
 var handler = express();
 var cors = require('cors')
-handler.use(cors({credentials: true, origin: true}));
+handler.use(cors({ credentials: true, origin: true }));
 var app = http.Server(handler);
 
 //var io = require('socket.io').listen(app, { origins: '*:*' });
 var io = require('socket.io')(app, { origins: '*:*' });
 
-handler.get('/socket.io-client', function(req, res) {
+handler.get('/socket.io-client', function (req, res) {
   var options = {
-      root: path.join(__dirname, '../')
-    }    
+    root: path.join(__dirname, '../')
+  }
   res.sendFile('./node_modules/socket.io-client/dist/socket.io.js', options)
 });
 
@@ -64,10 +64,10 @@ Object.keys(ifaces).forEach(function (ifname) {
   });
 });
 
-$("#socket-msg").html("Socket abierto en: <br/>127.0.0.1:"+socketPort);
+$("#socket-msg").html("Socket abierto en: <br/>127.0.0.1:" + socketPort);
 
-ips.forEach(function(i,v){
-  $("#socket-msg").html($("#socket-msg").html() + "<br/>"+i+":"+socketPort);
+ips.forEach(function (i, v) {
+  $("#socket-msg").html($("#socket-msg").html() + "<br/>" + i + ":" + socketPort);
 })
 
 
@@ -84,60 +84,61 @@ function handler(req, res) {
 }
 
 /* JOHNNY-FIVE GATEWAY */
-var board;
+//var board;
 var ifaz;
 var instances = new Array();
-var reconnectFlag = false;
+var reconnectFlag = new Array();
+var connectedPorts = new Array();
 var lastData = {};
 var lastMessage = {};
 
 function start(board, model) {
   ifaz = new Interfaz(board);
-  model = ifaz.init({model: model});
+  model = ifaz.init({ model: model });
   window.localStorage.setItem("model", model);
   var lcd = ifaz.lcd();
-  lcd.message(["Conectado en",board.port]);
+  lcd.message(["Conectado en", board.port]);
 
-  if(model == "rasti") {
-    notificationTitle += "Rasti";
+  if (model == "rasti") {
+    notificationTitle = "Interfaz Rasti";
   } else {
-    notificationTitle += "Robótica";
+    notificationTitle = "Interfaz Robótica";
   }
 
   let myNotification = new Notification(notificationTitle, {
-    body: 'Interfaz conectada en '+board.port
+    body: 'Interfaz conectada en ' + board.port
   })
 
 }
 
 function repeatLastData(data, key, msgKey) {
   var str = JSON.stringify(data);
-  var result = ((typeof lastData[key] != "undefined") &&  (str == lastData[key]));
-  lastData[key] =str;
-  if(result && msgKey) repeatMessage(msgKey);
+  var result = ((typeof lastData[key] != "undefined") && (str == lastData[key]));
+  lastData[key] = str;
+  if (result && msgKey) repeatMessage(msgKey);
   return result;
 }
 
-function sendMessage(result,key) {
-  if(typeof result != "object") return;
-  if(result.hasOwnProperty("message")) {
-    ifaz.lcd().message(result.message); 
+function sendMessage(result, key) {
+  if (typeof result != "object") return;
+  if (result.hasOwnProperty("message")) {
+    ifaz.lcd().message(result.message);
     lastMessage[key] = result.message;
-  } else  {
+  } else {
     ifaz.lcd().setTimeout();
   }
 }
 
 function repeatMessage(key) {
-  if(typeof lastMessage[key] != "undefined") {
-    ifaz.lcd().message(lastMessage[key]); 
+  if (typeof lastMessage[key] != "undefined") {
+    ifaz.lcd().message(lastMessage[key]);
   }
 }
 
 function initMessage(data, key, msgKey) {
-  if(typeof ifaz == "undefined") return false;
-  if(repeatLastData(data, 'output', msgKey)) return false; 
-  ifaz.lcd().clearTimeout();  
+  if (typeof ifaz == "undefined") return false;
+  if (repeatLastData(data, 'output', msgKey)) return false;
+  ifaz.lcd().clearTimeout();
   return true;
 }
 
@@ -147,11 +148,13 @@ io.sockets.on('connection', function (socket) {
 
   socket.emit("SOCKET_CONNECTED");
 
+  /*
   socket.on('INTERFAZ', function (data) {
-    if(typeof board != "undefined") {
+    if (typeof board != "undefined") {
       start(board, data.model);
-   }
+    }
   })
+  */
 
 
   socket.on('RESTART', function () {
@@ -161,114 +164,114 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('OUTPUT', function (data) {
     console.log('OUTPUT', data);
-    msgKey = 'output_'+data.method;
-    if(data.method != "inverse")
-      if(!initMessage(data, 'output', msgKey)) return;
+    msgKey = 'output_' + data.method;
+    if (data.method != "inverse")
+      if (!initMessage(data, 'output', msgKey)) return;
     var result = ifaz.output(data.index)[data.method](data.param);
     sendMessage(result, msgKey);
   })
 
   socket.on('PIN', function (data) {
     console.log('PIN', data);
-    msgKey = 'pin_'+data.method;
+    msgKey = 'pin_' + data.method;
     var result = ifaz.pin(data.index)[data.method](data.param);
     sendMessage(result, msgKey);
   })
-  
+
   socket.on('STEPPER', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var result = ifaz.stepper(data.index)[data.method](data.param, function (result) {
       socket.emit('STEPPER_MESSAGE', { index: data.index, value: result });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
-  
+
   socket.on('SERVO', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var result = ifaz.servo(data.index)[data.method](data.param);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
-  
+
   socket.on('ANALOG', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var result = ifaz.analog(data.index)[data.method](function (result) {
       socket.emit('ANALOG_MESSAGE', { index: data.index, value: result });
       socket.emit('SENSOR_MESSAGE', { index: data.index, value: this.value, boolean: this.boolean });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
-  
+
   socket.on('PING', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var obj = ifaz.ping(data.index);
     var result = obj[data.method](function (result) {
       socket.emit('PING_MESSAGE', { index: data.index, cm: this.cm, inches: this.inches });
     }, data.controller);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
-  
+
   socket.on('PIXEL', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var obj = ifaz.pixel(data.index);
     var result = obj[data.method](data.param, data.param2, data.param3);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
 
   socket.on('DIGITAL', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     if (data.method == 'on') {
-     var result = ifaz.digital(data.index)[data.method](function (result) {
+      var result = ifaz.digital(data.index)[data.method](function (result) {
         socket.emit('DIGITAL_MESSAGE', { index: data.index, value: result });
       });
     } else {
       var result = ifaz.digital(data.index)[data.method](data.param);
     }
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
 
   })
 
   socket.on('LCD', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var result = ifaz.lcd()[data.method](data.param, data.param2);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
 
   })
-  
-  
+
+
   socket.on('I2C', function (data) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     ifaz.i2c(data.address)[data.method](data.register, data.param, function (result) {
       socket.emit('I2C_MESSAGE', { address: data.address, register: data.register, value: result });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    if (result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else ifaz.lcd().setTimeout();
   })
-  
+
   socket.on('DEVICES_RESET', function () {
     instances = new Array();
   });
 
   socket.on('DEVICE_REMOVE', function (data) {
     instances = instances.filter(i => i.id != data.id);
-    if (typeof ins== "object") {
+    if (typeof ins == "object") {
       ins.device.removeAllListeners();
     }
   });
 
 
   socket.on('DEVICE', function (data, fn) {
-    if(typeof data == "string") data = JSON.parse(data);
+    if (typeof data == "string") data = JSON.parse(data);
     var ins = instances.filter(i => i.id == data.id).shift();
     // SI YA EXISTE SALGO
-    if(ins) {
-      if(typeof fn !="undefined") fn(false);
+    if (ins) {
+      if (typeof fn != "undefined") fn(false);
       return;
     }
     //let vm = new VM({ sandbox: { instances: instances, data: data, five: five }, require: {external: true,root: "./", }});
@@ -276,48 +279,48 @@ io.sockets.on('connection', function (socket) {
       console.log(data.options);
       data.options = (typeof data.options == "string") ? data.options : JSON.stringify(data.options);
       let result = eval('new five.' + data.device + '(' + data.options + ')');
-      instances.push({id: data.id, device: result});
+      instances.push({ id: data.id, device: result });
       console.log(instances)
     }
     catch (error) {
       console.error(error);
-      if(typeof fn !="undefined")  fn(false);
+      if (typeof fn != "undefined") fn(false);
     }
-    if(typeof fn !="undefined") fn(instances.length - 1);
+    if (typeof fn != "undefined") fn(instances.length - 1);
   })
 
   socket.on('DEVICE_EVENT', function (data, fn) {
-    if(typeof data == "string") data = JSON.parse(data);
+    if (typeof data == "string") data = JSON.parse(data);
     console.log(data);
     var ins = instances.filter(i => i.id == data.id).shift();
-    if (typeof ins== "object") {
-      if(typeof data.attributes == "string") data.attributes = JSON.parse(data.attributes);
+    if (typeof ins == "object") {
+      if (typeof data.attributes == "string") data.attributes = JSON.parse(data.attributes);
       ins.device.on(data.event, function () {
         results = {};
         try {
-          if(typeof data.attributes != "undefined")
-          data.attributes.forEach((reg) => {
-            results[reg] = eval("this."+reg);
-          })
-          socket.emit('DEVICE_MESSAGE', { event: data.event , id: data.id, attributes: results });
+          if (typeof data.attributes != "undefined")
+            data.attributes.forEach((reg) => {
+              results[reg] = eval("this." + reg);
+            })
+          socket.emit('DEVICE_MESSAGE', { event: data.event, id: data.id, attributes: results });
         } catch (error) {
           console.log(error);
-          if(typeof fn !="undefined") fn(false);
+          if (typeof fn != "undefined") fn(false);
         }
       });
-      if(typeof fn !="undefined") fn(true);
+      if (typeof fn != "undefined") fn(true);
     } else {
-      if(typeof fn !="undefined") fn(false);
+      if (typeof fn != "undefined") fn(false);
     }
   })
 
   socket.on('DEVICE_CALL', function (data, fn) {
-    if(typeof ifaz == "undefined") return;
+    if (typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     console.log(instances, data);
     var ins = instances.filter(i => i.id == data.id).shift();
-    if(!ins) { 
-      if(typeof fn !="undefined") fn(false);
+    if (!ins) {
+      if (typeof fn != "undefined") fn(false);
       return;
     };
     //let vm = new VM({ sandbox: { ins: ins, data: data, five: five } });
@@ -327,9 +330,9 @@ io.sockets.on('connection', function (socket) {
     }
     catch (error) {
       console.error(error);
-      if(typeof fn !="undefined") fn(false);
+      if (typeof fn != "undefined") fn(false);
     }
-    if(typeof fn !="undefined") fn(true);
+    if (typeof fn != "undefined") fn(true);
     ifaz.lcd().setTimeout();
   })
 
@@ -346,12 +349,12 @@ function scanPorts() {
     } else {
       $('#error').html('');
     }
-  
+
     if (ports.length === 0) {
       $('#error').html("No se encontraron puertos");
     }
-  
-  
+
+
     const headers = Object.keys(ports[0])
     $sel.empty();
     $("#ports").empty();
@@ -362,83 +365,99 @@ function scanPorts() {
       row.append($("<th>").text(r));
     });
     thead.append(row);
-    
+
     var tbody = $("<tbody>").appendTo(_table);
     ports.forEach(port => {
       // TABLA
       var row = $("<tr/>").appendTo(tbody);
       Object.values(port).forEach(p => {
-        row.append($("<td>").text(p));
+          row.append($("<td>").text(p));
       })
 
       // SELECT
-      $sel.append($('<option>', {
-        text: port.comName,
-        value: port.comName
-      }));
+      if(!connectedPorts.includes(port.comName)) {
+        $sel.append($('<option>', {
+          text: port.comName,
+          value: port.comName
+        }));
+      }
     })
-    M.FormSelect.init($('select'), {});  
+    M.FormSelect.init($('select'), {});
   })
 }
 
 function connect(port) {
-  board = new five.Board({
+  var board = new five.Board({
     port: port,
     repl: false,
-    timeout: 60000
+    timeout: 5000
   });
 
   board.on("error", function (err) {
     console.log(board);
     $("#error-msg").removeClass("hide");
-    connectBtn.disabled = false;           
+    connectBtn.disabled = false;
   })
-  
+
   board.on("ready", function () {
     console.log(five);
     console.log(board);
+    connectedPorts.push(this.port);
     // TEST var led = new five.Led(13);led.blink();
     defaultModel = "";
-    if(window.localStorage.getItem("model") != "null") {
+    if (window.localStorage.getItem("model") != "null") {
       defaultModel = window.localStorage.getItem("model");
-    } 
+    }
     start(this, defaultModel);
-    if(socketInstance)
+    if (socketInstance)
       socketInstance.emit("INTERFAZ_CONNECTED");
     console.log("ready!");
     $("#disconnected-msg").addClass("hide");
     $("#connected-msg").removeClass("hide");
-    //connectBtn.disabled = true;    
-    reconnectFlag = false;
+    $("#error-msg").addClass("hide");
 
-    if(board.io)
-    board.io.transport.on("close", function (err) {
-      console.log("desconectado!");
-      if(socketInstance) {
-        socketInstance.emit("DISCONNECTED_MESSAGE");
-      }
-      $("#connected-msg").addClass("hide");
-      $("#disconnected-msg").removeClass("hide");
-        connectBtn.disabled = false;        
-      reconnectFlag = true;   
-      let myNotification = new Notification(notificationTitle, {
-        body: 'Interfaz desconectada'
-      })      
-      scanPorts();
-    })
-  
+    //connectBtn.disabled = true;    
+    reconnectFlag.splice( reconnectFlag.indexOf(this.port), 1 );
+    scanPorts();
+    
+    if (this.io)
+    this.io.transport.on("close", function (err) {
+        console.log("desconectado!");
+        if (socketInstance) {
+          socketInstance.emit("DISCONNECTED_MESSAGE");
+        }
+        $("#connected-msg").addClass("hide");
+        $("#disconnected-msg").removeClass("hide");
+        connectBtn.disabled = false;
+        reconnectFlag.push(this.path);
+        connectedPorts.splice( connectedPorts.indexOf(this.path), 1 );
+
+        let myNotification = new Notification(notificationTitle, {
+          body: 'Interfaz desconectada de '+this.path
+        })
+        scanPorts();
+      })
+
   });
 }
 
-if(window.localStorage.getItem("port") != "null") {
+
+
+if (window.localStorage.getItem("port") != "null") {
   defaultPort = window.localStorage.getItem("port");
-  reconnectFlag = true;
+  try {
+    defaultPort = (defaultPort) ?  JSON.parse(defaultPort) : new Array();
+  } catch(e) {
+    defaultPort = new Array(defaultPort);
+    window.localStorage.setItem("port", JSON.stringify(defaultPort));
+  }
+  reconnectFlag = new Array();
   serialport.list((err, ports) => {
     ports.forEach(port => {
-      if(port.comName == defaultPort) {
-        reconnectFlag = false;
-        connect(defaultPort);
-        }
+      if (defaultPort.includes(port.comName)) {
+        reconnectFlag.splice( reconnectFlag.indexOf(port.comName), 1 );
+        connect(port.comName);
+      }
     })
   })
 } else {
@@ -447,8 +466,19 @@ if(window.localStorage.getItem("port") != "null") {
 
 var connectBtn = document.getElementById('connectBtn');
 connectBtn.addEventListener("click", function () {
-  window.localStorage.setItem("port", $sel.val());
-  window.location.reload();
+  var port = $sel.val();
+  defaultPort = window.localStorage.getItem("port");
+  try {
+    defaultPort = (defaultPort) ?  JSON.parse(defaultPort) : new Array();
+  } catch(e) {
+    defaultPort = new Array(defaultPort);
+  }
+  if(!defaultPort.includes(port)) {
+    defaultPort.push(port);
+  }
+  window.localStorage.setItem("port", JSON.stringify(defaultPort));
+  connect(port);
+  //window.location.reload();
 })
 
 var scanBtn = document.getElementById('scanBtn');
@@ -456,21 +486,30 @@ scanBtn.addEventListener("click", function () {
   scanPorts();
 })
 
-  setInterval(function() {
-    if(reconnectFlag ) {
-      $("#loading").removeClass("hide");
-      console.log("Intento de reconexión");
-      defaultPort = window.localStorage.getItem("port");
-      if(defaultPort) {
-        serialport.list((err, ports) => {
-          ports.forEach(port => {
-            if(port.comName == defaultPort) {
-              window.location.reload();
-            }
-          })
+var clearBtn = document.getElementById('clearBtn');
+clearBtn.addEventListener("click", function () {
+  window.localStorage.removeItem("port");
+})
+
+setInterval(function () {
+  if (reconnectFlag.length > 0) {
+    $("#loading").removeClass("hide");
+    console.log("Intento de reconexión");
+    scanPorts();
+    //defaultPort = window.localStorage.getItem("port");
+    //defaultPort = (defaultPort) ?  JSON.parse(defaultPort) : new Array();
+      if (reconnectFlag) {
+      serialport.list((err, ports) => {
+        ports.forEach(port => {
+          if (reconnectFlag.includes(port.comName)) {
+            connect(port.comName);
+            $("#loading").addClass("hide");
+            //window.location.reload();
+          }
         })
-      } 
+      })
     }
-  }, 2000);
-  
-  scanPorts();
+  }
+}, 2000);
+
+scanPorts();
