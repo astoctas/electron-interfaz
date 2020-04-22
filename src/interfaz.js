@@ -475,31 +475,9 @@ function I2CJoystick(five, index) {
             board: this.virtual
         }                
     ])
-    /*
-    this.sensorX = new five.Sensor(        {
-        pin: "A0",
-        threshold: 100,
-        board: this.virtual
-    });
-    this.sensorY = new five.Sensor({
-        pin: "A1",
-        threshold: 100,
-        board: this.virtual
-    });
-    this.sensorBtn = new five.Sensor({
-        pin: "A2",
-        threshold: 500,
-        board: this.virtual
-      });
-      */
       this.row0 = "Joystick ".formatUnicorn(this.index);
-      this.on = function(callbackX, callbackY, callbackBtn) {
+      this.on = function(callbackX) {
         this.sensors.on("data", callbackX);
-        /*
-        this.sensorX.on("data", callbackX);
-        this.sensorY.on("data", callbackY);
-        this.sensorBtn.on("data", callbackBtn);
-        */
         return {"message":[this.row0, "reportando"]}
     }
 }
