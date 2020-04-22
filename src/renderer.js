@@ -42,8 +42,6 @@ M.AutoInit();
 
 var socketInstance = false;
 
-const wsocket = new WebSocket('ws://localhost:8080');
-
 
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -222,14 +220,20 @@ io.sockets.on('connection', function (socket) {
   })
   
   socket.on('I2CJOYSTICK', function (data) {
-    console.log(data)
     if(typeof ifaz == "undefined") return;
     ifaz.lcd().clearTimeout();
     var obj = ifaz.I2CJoystick(data.index);
     if(data.method == "on") {
+
+      var result = obj[data.method](function(d) {
+        x = d[0].value < 500 ? -1 : d[0].value < 950 ? 0 : 1;
+        y = d[1].value < 500 ? -1 : d[1].value < 950 ? 0 : 1;
+        btn = d[2].value < 1 ? 1 : 0;
+        socket.emit('I2CJOYSTICK_MESSAGE', { "x": x, "y": y, "button": btn });
+      });
+        /*
       var result = obj[data.method](function(d) {
         console.log("x: ",d);
-        d = d < 500 ? -1 : d < 950 ? 0 : 1;
        socket.emit('I2CJOYSTICK_MESSAGE', { "x": d });
       }, function(d) {
         console.log("y: ",d);
@@ -240,6 +244,7 @@ io.sockets.on('connection', function (socket) {
         d = d < 50 ? 1 : 0;
         socket.emit('I2CJOYSTICK_MESSAGE', { button: d });
       });
+        */
     }
     if(result && result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
   })

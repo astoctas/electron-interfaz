@@ -253,7 +253,7 @@ function SENSOR(five, io, channel,pin) {
     this.on = function(callback) {
         this.io.pinMode(this.pin, this.mode);
         this.sensor = new five.Sensor("A"+this.channel);
-        this.sensor.on("change", callback);
+        this.sensor.on("data", callback);
         return {"message":[this.row0, "reportando"]}
     }
     this.off = function () { 
@@ -377,7 +377,7 @@ function PING(five, channel, controller, io) {
             controller: controller,
             pin: "A"+this.channel
           });
-        this.sensor.on("change", callback);
+        this.sensor.on("data", callback);
         return {"message":[this.row0, "ultrasonido"]}
     }
     this.off = function () { 
@@ -458,7 +458,25 @@ function I2CJoystick(five, index) {
     this.virtual = new five.Board.Virtual(
         new five.Expander("PCF8591")
       );
-    this.sensorX = new five.Sensor({
+    this.sensors = new five.Sensors([
+        {
+            pin: "A0",
+            threshold: 100,
+            board: this.virtual
+        },
+        {
+            pin: "A1",
+            threshold: 100,
+            board: this.virtual
+        },
+        {
+            pin: "A2",
+            threshold: 100,
+            board: this.virtual
+        }                
+    ])
+    /*
+    this.sensorX = new five.Sensor(        {
         pin: "A0",
         threshold: 100,
         board: this.virtual
@@ -473,14 +491,17 @@ function I2CJoystick(five, index) {
         threshold: 500,
         board: this.virtual
       });
+      */
       this.row0 = "Joystick ".formatUnicorn(this.index);
       this.on = function(callbackX, callbackY, callbackBtn) {
-        this.sensorX.on("change", callbackX);
-        this.sensorY.on("change", callbackY);
-        this.sensorBtn.on("change", callbackBtn);
+        this.sensors.on("data", callbackX);
+        /*
+        this.sensorX.on("data", callbackX);
+        this.sensorY.on("data", callbackY);
+        this.sensorBtn.on("data", callbackBtn);
+        */
         return {"message":[this.row0, "reportando"]}
     }
-
 }
 
 /*
