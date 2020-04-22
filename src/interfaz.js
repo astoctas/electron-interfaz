@@ -403,7 +403,6 @@ function PIXEL(board, pin, index) {
             board: this.board,
             controller: "FIRMATA",
         });        
-        console.log(this.strip);
         return {"message":[this.row0, "creado"]}
     }
     this.pixel = function(i) {
@@ -450,6 +449,36 @@ function PIXEL(board, pin, index) {
         el.off();
         this.strip.show();
         return {"message":[this.row0, "apagado"]}
+    }
+
+}
+
+function I2CJoystick(five, index) {
+    this.index = index;
+    this.virtual = new five.Board.Virtual(
+        new five.Expander("PCF8591")
+      );
+    this.sensorX = new five.Sensor({
+        pin: "A0",
+        threshold: 100,
+        board: this.virtual
+    });
+    this.sensorY = new five.Sensor({
+        pin: "A1",
+        threshold: 100,
+        board: this.virtual
+    });
+    this.sensorBtn = new five.Sensor({
+        pin: "A2",
+        threshold: 500,
+        board: this.virtual
+      });
+      this.row0 = "Joystick ".formatUnicorn(this.index);
+      this.on = function(callbackX, callbackY, callbackBtn) {
+        this.sensorX.on("change", callbackX);
+        this.sensorY.on("change", callbackY);
+        this.sensorBtn.on("change", callbackBtn);
+        return {"message":[this.row0, "reportando"]}
     }
 
 }
@@ -538,6 +567,7 @@ module.exports = function (five) {
                 this.MAXANALOGS = 4;
                 this.MAXDIGITAL = 4;
                 this.MAXPIXELS = 2;
+                this.MAXI2CJOYSTICK = 1;
                 var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
                 this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
                 this.servo_config = [9,10];
@@ -549,6 +579,7 @@ module.exports = function (five) {
                 this._digitals = new Array();
                 this._pings = new Array();
                 this._pixels = new Array();
+                this._i2cjoysticks = new Array();
             break;
             case "mega":
                 if(this.board.type != "MEGA") return;
@@ -584,6 +615,7 @@ module.exports = function (five) {
                     this.MAXOUTPUTS = 2;
                     this.MAXSERVOS = 2;
                     this.MAXPIXELS = 4;
+                    this.MAXI2CJOYSTICK = 1;
                     this.digital_config = [9,10,11,12];
                     this.analog_config = [14,15,16,17];
                     this.pixels_config = [9,10,11,12];
@@ -599,6 +631,7 @@ module.exports = function (five) {
                     this._pins = new Array();
                     this._pings = new Array();
                     this._pixels = new Array();
+                    this._i2cjoysticks = new Array();
             break;
         }
            console.log(this);
@@ -695,6 +728,15 @@ module.exports = function (five) {
             }
             return this._pixels[index-1];
         }
+
+        Interfaz.prototype.I2CJoystick = function (index) {
+            if (index < 1)  index = 1;
+            if (index > this.MAXI2CJOYSTICK) index = this.MAXI2CJOYSTICK;
+            if(typeof this._i2cjoysticks[index-1] == "undefined") {
+                this._i2cjoysticks[index-1] = new I2CJoystick(five, index);
+            }
+            return this._i2cjoysticks[index - 1];
+        }        
   
       return Interfaz;
     }());
