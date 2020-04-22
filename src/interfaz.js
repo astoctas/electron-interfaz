@@ -253,7 +253,7 @@ function SENSOR(five, io, channel,pin) {
     this.on = function(callback) {
         this.io.pinMode(this.pin, this.mode);
         this.sensor = new five.Sensor("A"+this.channel);
-        this.sensor.on("change", callback);
+        this.sensor.on("data", callback);
         return {"message":[this.row0, "reportando"]}
     }
     this.off = function () { 
@@ -475,9 +475,9 @@ function I2CJoystick(five, index) {
       });
       this.row0 = "Joystick ".formatUnicorn(this.index);
       this.on = function(callbackX, callbackY, callbackBtn) {
-        this.sensorX.on("change", callbackX);
-        this.sensorY.on("change", callbackY);
-        this.sensorBtn.on("change", callbackBtn);
+        this.sensorX.on("data", callbackX);
+        this.sensorY.on("data", callbackY);
+        this.sensorBtn.on("data", callbackBtn);
         return {"message":[this.row0, "reportando"]}
     }
 
