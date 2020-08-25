@@ -27,13 +27,7 @@
 
         <p id="socket-msg" style="color: green; display: block"></p>
         
-        <!-- All of the Node.js APIs are available in this renderer process. -->
-        <h5>Puertos disponibles</h5>
-        <div id="error"></div>
-        <div id="ports"></div>
-        <p></p>
         <div class="row">
-
           <div class="input-field col s4">
           <select id="select-ports">
             <option value="1">Option 1</option>
@@ -47,7 +41,13 @@
           <button class="waves-effect waves-light btn" id="scanBtn">Escanear puertos</button>
         </div>
       </div>
-      <div  id="error-msg" class="card-panel red white-text hide"><h6>No se puede abrir el puerto. Intentar con otro puerto.</h6></div>
+        <div  id="error-msg" class="card-panel red white-text hide"><h6>No se puede abrir el puerto. Intentar con otro puerto.</h6></div>
+        <!-- All of the Node.js APIs are available in this renderer process. -->
+        <h5>Puertos disponibles</h5>
+        <div id="error"></div>
+        <div id="ports"></div>
+        <p></p>
+
   </div>
 </div>
 </main> 

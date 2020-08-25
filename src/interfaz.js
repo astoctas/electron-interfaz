@@ -115,30 +115,51 @@ function DCL293(io, deviceNum) {
         return {"message":[this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow/255*100))]}
     }
 }
-/*
-function DC(io, deviceNum) {
+
+const DC_MESSAGE = 2
+const DC_ON = 1
+const DC_OFF = 2
+const DC_BRAKE = 3
+const DC_INVERSE = 4
+const DC_DIR = 5
+const DC_SPEED = 6
+
+function DC(io, deviceNum, lcd) {
     this.io = io;
+    this.dir = 0;
     this.deviceNum = deviceNum;
+    this.hasLCD = lcd;
+    this.speed = 100;
+    this.row0 = "salida {0}".formatUnicorn(this.deviceNum+1);
     this.on = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_ON,this.deviceNum]);
+        return this.hasLCD ? {"message":[this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed))]} : false;
      }
     this.off = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_OFF,this.deviceNum]);
+        return this.hasLCD ? {"message":[this.row0, "apagado"]}: false;
      }
     this.brake = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_BRAKE,this.deviceNum]);
+        return this.hasLCD ? {"message":[this.row0, "frenado"]}: false;
      }
     this.inverse = function() {
+        this.dir = !dir;
         this.io.sysexCommand([DC_MESSAGE,DC_INVERSE,this.deviceNum]);
+        return this.hasLCD ? {"message":[this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]}: false;
      }
     this.direction = function(dir) {
+        this.dir = dir;
         this.io.sysexCommand([DC_MESSAGE,DC_DIR,this.deviceNum, dir]);
+        return this.hasLCD ? {"message":[this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")]}: false;
      }
     this.power = function(pow) {
+        this.speed = pow;
         this.io.sysexCommand([DC_MESSAGE,DC_SPEED,this.deviceNum, pow]);
+        return this.hasLCD ? {"message":[this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow))]}: false;
     }
 }
-*/
+
 /*
 function STEPPER(io, deviceNum) {
     this.io = io;
@@ -567,8 +588,8 @@ module.exports = function (five) {
                 this.MAXDIGITAL = 4;
                 this.MAXPIXELS = 2;
                 this.MAXI2CJOYSTICK = 1;
-                var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
-                this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
+                //var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
+                //this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
                 this.servo_config = [9,10];
                 this.analog_config = [14,15,16,17];
                 this.digital_config = [14,15,16,17];
@@ -618,10 +639,7 @@ module.exports = function (five) {
                     this.digital_config = [9,10,11,12];
                     this.analog_config = [14,15,16,17];
                     this.pixels_config = [9,10,11,12];
-                    this.dc_config = [
-                        [6,7],
-                        [4,5]
-                    ]
+                    //this.dc_config = [[6,7],[4,5]]
                     this.pins_config = [9,10,11,12];
                     this.servo_config = [9,10,11,12];
                     this._servos = new Array();
@@ -636,16 +654,24 @@ module.exports = function (five) {
            console.log(this);
             return opts.model;
     }
+
+        Interfaz.prototype.lcdModel = function() {
+            return this.opts.model != "rasti"
+        }
   
         Interfaz.prototype.output = function (index) {
             if (index < 1)  index = 1;
             if (index > this.MAXOUTPUTS) return index = this.MAXOUTPUTS;
             if(typeof this._dc[index-1] == "undefined") {
+                /*
                 if(this.opts.model == "rasti") {
                     this._dc[index-1] = new RastiCC(this.io, this.dc_config[index-1], index-1);
                 } else {
                     this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
                 }
+                */
+               this._dc[index-1] = new DC(this.io, index-1, this.lcdModel());
+
             }
             return this._dc[index - 1];
         }

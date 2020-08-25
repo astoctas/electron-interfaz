@@ -313,6 +313,7 @@ io.sockets.on('connection', function (socket) {
       console.error(error);
       if(typeof fn !="undefined")  fn(false);
     }
+    socket.emit("DEVICE_ID", {"device": data.device, "id": instances.length - 1});
     if(typeof fn !="undefined") fn(instances.length - 1);
   })
 
@@ -413,9 +414,10 @@ function scanPorts() {
 
 function connect(port) {
   board = new five.Board({
+    baudrate: 57600,
     port: port,
     repl: false,
-    timeout: 60000
+    timeout: 6000
   });
 
   board.on("error", function (err) {

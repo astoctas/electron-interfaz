@@ -33,7 +33,7 @@ function createWindow () {
       "page-visibility": true ,
       backgroundThrottling: false
     },
-    icon: path.join(__dirname, 'resources','interfaz.png')
+    icon: path.join(__dirname, 'resources','64.png')
   })
 
   // and load the index.html of the app.
@@ -64,7 +64,7 @@ function createWindow () {
 });
 
 
-var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', 'interfaz.png') : 'resources/interfaz.png';
+var  iconPath = os.platform() == 'win32' ? path.join(__dirname,'resources', '64.png') : 'resources/64.png';
 var trayIcon = nativeImage.createFromPath(iconPath);
 //trayIcon = trayIcon.resize({ width: 32, height: 32 });
 tray = new Tray(trayIcon)
