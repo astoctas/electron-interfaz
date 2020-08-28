@@ -18,6 +18,7 @@ let tray = null
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
+Menu.setApplicationMenu(null)
 
 function createWindow () {
 
@@ -31,10 +32,12 @@ function createWindow () {
   mainWindow = new BrowserWindow({width: 1150, height: 600, center: true, minimizable: true, show: !app.isPackaged,
     "web-preferences": { 
       "page-visibility": true ,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      autoHideMenuBar: true 
     },
     icon: path.join(__dirname, 'resources','64.png')
   })
+
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({

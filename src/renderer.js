@@ -20,7 +20,7 @@ handler.get('/socket.io-client', function(req, res) {
   var options = {
       root: path.join(__dirname, '../')
     }    
-  res.sendFile('./node_modules/socket.io-client/dist/socket.io.js', options)
+    res.sendFile('./node_modules/socket.io-client/dist/socket.io.js', options)
 });
 
 
@@ -34,6 +34,7 @@ var Interfaz = require("./interfaz")(five);
 var os = require('os');
 var ifaces = os.networkInterfaces();
 //const { VM } = require('vm2');
+var portCount = 0;
 var $ = require("jquery");
 
 var ips = new Array();
@@ -64,7 +65,7 @@ Object.keys(ifaces).forEach(function (ifname) {
   });
 });
 
-$("#socket-msg").html("Socket abierto en: <br/>127.0.0.1:"+socketPort);
+$("#socket-msg").html("127.0.0.1:"+socketPort);
 
 ips.forEach(function(i,v){
   $("#socket-msg").html($("#socket-msg").html() + "<br/>"+i+":"+socketPort);
@@ -93,6 +94,7 @@ var lastMessage = {};
 
 function start(board, model) {
   ifaz = new Interfaz(board);
+  console.log(ifaz)
   model = ifaz.init({model: model});
   window.localStorage.setItem("model", model);
   var lcd = ifaz.lcd();
@@ -370,6 +372,7 @@ var $sel = $('#select-ports');
 
 function scanPorts() {
   serialport.list((err, ports) => {
+    portCount = ports.length;
     console.log('ports', ports);
     if (err) {
       $('#error').html(err.message);
@@ -395,6 +398,13 @@ function scanPorts() {
     thead.append(row);
     
     var tbody = $("<tbody>").appendTo(_table);
+
+    $sel.append($('<option>', {
+      text: "Automático",
+      value: "auto"
+    }));
+
+
     ports.forEach(port => {
       // TABLA
       var row = $("<tr/>").appendTo(tbody);
@@ -438,6 +448,7 @@ function connect(port) {
     if(socketInstance)
       socketInstance.emit("INTERFAZ_CONNECTED");
     console.log("ready!");
+    $("#connected-msg h5").html("Conectado en "+board.port)
     $("#disconnected-msg").addClass("hide");
     $("#connected-msg").removeClass("hide");
     //connectBtn.disabled = true;    
@@ -462,7 +473,8 @@ function connect(port) {
   });
 }
 
-if(window.localStorage.getItem("port") != "null") {
+
+if(window.localStorage.getItem("port") != null && window.localStorage.getItem("port") != "auto") {
   defaultPort = window.localStorage.getItem("port");
   reconnectFlag = true;
   serialport.list((err, ports) => {
@@ -470,11 +482,17 @@ if(window.localStorage.getItem("port") != "null") {
       if(port.comName == defaultPort) {
         reconnectFlag = false;
         connect(defaultPort);
-        }
+      }
     })
   })
 } else {
-  connect();
+  serialport.list((err, ports) => {
+    ports.forEach(port => {
+      if(port.serialNumber) {
+        connect(port.comName);
+      }
+    })
+  })
 }
 
 var connectBtn = document.getElementById('connectBtn');
@@ -488,21 +506,28 @@ scanBtn.addEventListener("click", function () {
   scanPorts();
 })
 
-  setInterval(function() {
-    if(reconnectFlag ) {
-      $("#loading").removeClass("hide");
-      console.log("Intento de reconexión");
-      defaultPort = window.localStorage.getItem("port");
-      if(defaultPort) {
-        serialport.list((err, ports) => {
-          ports.forEach(port => {
-            if(port.comName == defaultPort) {
-              window.location.reload();
-            }
-          })
+
+setInterval(function() {
+  defaultPort = window.localStorage.getItem("port");
+  if(defaultPort == null || reconnectFlag ) {
+    $("#loading").removeClass("hide");
+    console.log("Intento de reconexión");
+    serialport.list((err, ports) => {
+      if(defaultPort != null && defaultPort != "auto") {
+        ports.forEach(port => {
+          if(port.comName == defaultPort) {
+            window.location.reload();
+          }
         })
-      } 
-    }
-  }, 2000);
+      } else  {
+        if(portCount != ports.length) {
+          window.localStorage.setItem("port", "auto");
+          window.location.reload();
+        }
+      }
+      portCount = ports.length;
+    })
+  }
+}, 2000);
   
   scanPorts();
