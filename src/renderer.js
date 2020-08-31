@@ -121,24 +121,21 @@ function repeatLastData(data, key, msgKey) {
 }
 
 function sendMessage(result,key) {
-  if(typeof result != "object") return;
-  if(result.hasOwnProperty("message")) {
-    ifaz.lcd().message(result.message); 
-    lastMessage[key] = result.message;
-  } else  {
-    ifaz.lcd().setTimeout();
-  }
+  if(typeof ifaz == "undefined") return false;
+  if(typeof ifaz.lcd() == "undefined") return false;
+  lastMessage[key] = ifaz.lcd().message();
 }
 
 function repeatMessage(key) {
   if(typeof lastMessage[key] != "undefined") {
-    ifaz.lcd().message(lastMessage[key]); 
+    ifaz.lcd().message(); 
   }
 }
 
 function initMessage(data, key, msgKey) {
   if(typeof ifaz == "undefined") return false;
-  if(repeatLastData(data, 'output', msgKey)) return false; 
+  if(typeof ifaz.lcd() == "undefined") return false;
+  //if(repeatLastData(data, 'output', msgKey)) return false; 
   ifaz.lcd().clearTimeout();  
   return true;
 }
@@ -164,66 +161,67 @@ io.sockets.on('connection', function (socket) {
   socket.on('OUTPUT', function (data) {
     console.log('OUTPUT', data);
     msgKey = 'output_'+data.method;
-    if(data.method != "inverse")
-      if(!initMessage(data, 'output', msgKey)) return;
+    initMessage(data, 'output', msgKey);
     var result = ifaz.output(data.index)[data.method](data.param);
-    sendMessage(result, msgKey);
+    sendMessage(msgKey);
   })
 
   socket.on('PIN', function (data) {
     console.log('PIN', data);
+    if(typeof ifaz == "undefined") return;
+    initMessage();
     msgKey = 'pin_'+data.method;
     var result = ifaz.pin(data.index)[data.method](data.param);
-    sendMessage(result, msgKey);
+    sendMessage(msgKey);
   })
   
   socket.on('STEPPER', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var result = ifaz.stepper(data.index)[data.method](data.param, function (result) {
       socket.emit('STEPPER_MESSAGE', { index: data.index, value: result });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('SERVO', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var result = ifaz.servo(data.index)[data.method](data.param);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('ANALOG', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var result = ifaz.analog(data.index)[data.method](function (result) {
       socket.emit('ANALOG_MESSAGE', { index: data.index, value: result });
       //socket.emit('SENSOR_MESSAGE', { index: data.index, value: this.value, boolean: this.boolean });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('PING', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var obj = ifaz.ping(data.index);
     var result = obj[data.method](function (result) {
       socket.emit('PING_MESSAGE', { index: data.index, cm: this.cm, inches: this.inches });
     }, data.controller);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('PIXEL', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var obj = ifaz.pixel(data.index);
     var result = obj[data.method](data.param, data.param2, data.param3);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('I2CJOYSTICK', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var obj = ifaz.I2CJoystick(data.index);
     if(data.method == "on") {
 
@@ -253,7 +251,7 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('DIGITAL', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     if (data.method == 'on') {
      var result = ifaz.digital(data.index)[data.method](function (result) {
         socket.emit('DIGITAL_MESSAGE', { index: data.index, value: result });
@@ -261,26 +259,26 @@ io.sockets.on('connection', function (socket) {
     } else {
       var result = ifaz.digital(data.index)[data.method](data.param);
     }
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
 
   })
 
   socket.on('LCD', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     var result = ifaz.lcd()[data.method](data.param, data.param2);
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
 
   })
   
   
   socket.on('I2C', function (data) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     ifaz.i2c(data.address)[data.method](data.register, data.param, function (result) {
       socket.emit('I2C_MESSAGE', { address: data.address, register: data.register, value: result });
     });
-    if(result.hasOwnProperty("message")) ifaz.lcd().message(result.message); else  ifaz.lcd().setTimeout();
+    sendMessage(msgKey)
   })
   
   socket.on('DEVICES_RESET', function () {
@@ -346,7 +344,7 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('DEVICE_CALL', function (data, fn) {
     if(typeof ifaz == "undefined") return;
-    ifaz.lcd().clearTimeout();
+    initMessage();
     console.log(instances, data);
     var ins = instances.filter(i => i.id == data.id).shift();
     if(!ins) { 
@@ -488,7 +486,7 @@ if(window.localStorage.getItem("port") != null && window.localStorage.getItem("p
 } else {
   serialport.list((err, ports) => {
     ports.forEach(port => {
-      if(port.serialNumber) {
+      if(port.pnpId) {
         connect(port.comName);
       }
     })

@@ -19,6 +19,20 @@ function () {
     return str;
 };
 
+function PrintQueue() {
+    this.queue = "";
+
+    this.add = function(data) {
+        this.queue = data;
+    }
+
+    this.get = function() {
+        return this.queue;
+    }
+}
+
+
+var _pq = new PrintQueue();
 
 function RastiCC(io, config, deviceNum) {
     this.io = io;
@@ -89,30 +103,36 @@ function DCL293(io, deviceNum) {
     this.on = function() {
         this.status = 1;
         this.onif();
-        return {"message":[this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed/255*100))]}
+        _pq.add([this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed/255*100))])
+		return true;
     }
     this.off = function() {
         this.io.stop();
         this.status = 0;
-        return {"message":[this.row0, "apagado"]}
+        _pq.add([this.row0, "apagado"])
+		return true;
     }
     this.brake = function() {
         this.io.brake();
-        return {"message":[this.row0, "frenado"]}
+        _pq.add([this.row0, "frenado"])
+		return true;
     }
     this.inverse = function() {
         this.direction(!this.dir);
-        return {"message":[this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]}
+        _pq.add([this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")])
+		return true;
     }
     this.direction = function(dir) {
         this.dir = dir;
         this.onif();
-        return {"message":[this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")]}
+        _pq.add([this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")])
+		return true;
     }
     this.power = function(pow) {
         this.speed = pow;
         this.onif();
-        return {"message":[this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow/255*100))]}
+        _pq.add([this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow/255*100))])
+		return true;
     }
 }
 
@@ -124,39 +144,44 @@ const DC_INVERSE = 4
 const DC_DIR = 5
 const DC_SPEED = 6
 
-function DC(io, deviceNum, lcd) {
+function DC(io, deviceNum) {
     this.io = io;
     this.dir = 0;
     this.deviceNum = deviceNum;
-    this.hasLCD = lcd;
     this.speed = 100;
     this.row0 = "salida {0}".formatUnicorn(this.deviceNum+1);
     this.on = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_ON,this.deviceNum]);
-        return this.hasLCD ? {"message":[this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed))]} : false;
+        _pq.add([this.row0, "encendido {0} {1}%".formatUnicorn(this.dir ? "B" : "A", Math.floor(this.speed))]);
+        return true;
      }
     this.off = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_OFF,this.deviceNum]);
-        return this.hasLCD ? {"message":[this.row0, "apagado"]}: false;
+        _pq.add([this.row0, "apagado"]);
+        return true;
      }
     this.brake = function() {
         this.io.sysexCommand([DC_MESSAGE,DC_BRAKE,this.deviceNum]);
-        return this.hasLCD ? {"message":[this.row0, "frenado"]}: false;
-     }
+        _pq.add([this.row0, "frenado"])
+        return true;
+    }
     this.inverse = function() {
         this.dir = !dir;
         this.io.sysexCommand([DC_MESSAGE,DC_INVERSE,this.deviceNum]);
-        return this.hasLCD ? {"message":[this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]}: false;
-     }
+        _pq.add([this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]);
+        return true;
+    }
     this.direction = function(dir) {
         this.dir = dir;
         this.io.sysexCommand([DC_MESSAGE,DC_DIR,this.deviceNum, dir]);
-        return this.hasLCD ? {"message":[this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")]}: false;
-     }
+        _pq.add([this.row0, "direccion {0}".formatUnicorn(this.dir ? "B" : "A")]);
+        return true;
+    }
     this.power = function(pow) {
         this.speed = pow;
         this.io.sysexCommand([DC_MESSAGE,DC_SPEED,this.deviceNum, pow]);
-        return this.hasLCD ? {"message":[this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow))]}: false;
+        _pq.add([this.row0, "potencia {0}%".formatUnicorn(Math.floor(pow))]);
+        return true;
     }
 }
 
@@ -197,15 +222,18 @@ function ACCELSTEPPER(io, stepPin, directionPin, enablePin, deviceNum) {
             this.io.accelStepperEnable(this.deviceNum, true);
             callback(position);
         });
-        return {"message":[this.row0, "{0} pasos".formatUnicorn(steps)]}
+        _pq.add([this.row0, "{0} pasos".formatUnicorn(steps)])
+        return true;
     }
     this.stop = function () {
         this.io.accelStepperStop(this.deviceNum);
-        return {"message":[this.row0, "detenido"]}
+        _pq.add([this.row0, "detenido"])
+		return true;
     }
     this.speed = function (speed) {
         this.io.accelStepperSpeed(this.deviceNum, speed);
-        return {"message":[this.row0, "vel. {0} rpm".formatUnicorn(speed)]}
+        _pq.add([this.row0, "vel. {0} rpm".formatUnicorn(speed)])
+		return true;
     }
 }
 
@@ -227,7 +255,8 @@ function SERVOJ5(io, deviceNum) {
     this.row0 = "servo {0}".formatUnicorn(this.deviceNum+1);
     this.position = function (pos) {
         this.io.to(pos);
-        return {"message":[this.row0, "posicion {0}".formatUnicorn(pos)]}
+        _pq.add([this.row0, "posicion {0}".formatUnicorn(pos)])
+		return true;
     }
 }
 
@@ -239,11 +268,13 @@ function ANALOG(io, channel) {
     this.sensor = false;
     this.on = function(callback) {
         this.io.analogRead(this.channel, callback);
-        return {"message":[this.row0, "reportando"]}
+        _pq.add([this.row0, "reportando"])
+		return true;
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
-        return {"message":[this.row0, "apagada"]}
+        _pq.add([this.row0, "apagada"])
+		return true;
     }
 }
 */
@@ -275,12 +306,14 @@ function SENSOR(five, io, channel,pin) {
         this.io.pinMode(this.pin, this.mode);
         this.sensor = new five.Sensor("A"+this.channel);
         this.sensor.on("data", callback);
-        return {"message":[this.row0, "reportando"]}
+        _pq.add([this.row0, "reportando"])
+		return true;
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
         if(this.sensor) this.sensor.removeAllListeners();
-        return {"message":[this.row0, "apagada"]}
+        _pq.add([this.row0, "apagada"])
+		return true;
     }
 }
 
@@ -294,16 +327,19 @@ function DIGITAL(io, pin, channel) {
     this.on = function (callback) {
         this.io.pinMode(this.pin, this.mode);
         this.io.digitalRead(this.pin, callback);
-        return {"message":[this.row0, "reportando"]}
+        _pq.add([this.row0, "reportando"])
+		return true;
     }
     this.pullup = function (enabled) {
         this.mode = (enabled) ? this.io.MODES.PULLUP : this.io.MODES.INPUT;
         this.io.pinMode(this.pin, this.mode);
-        return {"message":[this.row0, "pullup"]}
+        _pq.add([this.row0, "pullup"])
+		return true;
     }
     this.off = function () { 
         this.io.reportDigitalPin(this.pin, 0);
-        return {"message":[this.row0, "apagada"]}
+        _pq.add([this.row0, "apagada"])
+		return true;
 
     }    
 }
@@ -372,17 +408,20 @@ function LCDPCF8574(io) {
                 me.print(1, data[1])
             }
             me.data = false;
+            _pq.clear();
         }, this.timeout);
     }
     this.clearTimeout = function() {
         clearTimeout(this.handle);
         return {};
     }
-    this.message = function(data, force) {
+   
+    this.message = function(force) {
         if(!force && !this.enabled) return;
-        this.data = data;
+        this.data = _pq.get();
+        console.log(this.data)
         this.setTimeout();
-        return {};
+        return this.data;
     }
 } 
 
@@ -399,7 +438,8 @@ function PING(five, channel, controller, io) {
             pin: "A"+this.channel
           });
         this.sensor.on("data", callback);
-        return {"message":[this.row0, "ultrasonido"]}
+        _pq.add([this.row0, "ultrasonido"])
+		return true;
     }
     this.off = function () { 
         this.io.reportAnalogPin(this.channel, 0);
@@ -424,7 +464,8 @@ function PIXEL(board, pin, index) {
             board: this.board,
             controller: "FIRMATA",
         });        
-        return {"message":[this.row0, "creado"]}
+        _pq.add([this.row0, "creado"])
+		return true;
     }
     this.pixel = function(i) {
         return (this.strip) ?  this.strip.pixel(i-1) : false;
@@ -439,13 +480,15 @@ function PIXEL(board, pin, index) {
         }
         el.color(color);
         this.strip.show();
-        return {"message":[this.row0, "color"]}
+        _pq.add([this.row0, "color"])
+		return true;
     }
     this.shift = function(offset, direction, wrap) {
         if(!this.strip) return;
         this.strip.shift(offset, direction, wrap);
         this.strip.show();
-        return {"message":[this.row0, "desplazado"]}
+        _pq.add([this.row0, "desplazado"])
+		return true;
     }
     this.on = function(i) {
         if(!this.strip) return;
@@ -457,7 +500,8 @@ function PIXEL(board, pin, index) {
         }
         el.color("white");
         this.strip.show();
-        return {"message":[this.row0, "encendido"]}
+        _pq.add([this.row0, "encendido"])
+		return true;
     }
     this.off = function (i) { 
         if(!this.strip) return;
@@ -469,7 +513,8 @@ function PIXEL(board, pin, index) {
         }
         el.off();
         this.strip.show();
-        return {"message":[this.row0, "apagado"]}
+        _pq.add([this.row0, "apagado"])
+		return true;
     }
 
 }
@@ -499,7 +544,8 @@ function I2CJoystick(five, index) {
       this.row0 = "Joystick ".formatUnicorn(this.index);
       this.on = function(callbackX) {
         this.sensors.on("data", callbackX);
-        return {"message":[this.row0, "reportando"]}
+        _pq.add([this.row0, "reportando"])
+		return true;
     }
 }
 
@@ -670,7 +716,7 @@ module.exports = function (five) {
                     this._dc[index-1] = new DCL293(new five.Motor(this.dc_config[index-1]), index-1);
                 }
                 */
-               this._dc[index-1] = new DC(this.io, index-1, this.lcdModel());
+               this._dc[index-1] = new DC(this.io, index-1);
 
             }
             return this._dc[index - 1];
