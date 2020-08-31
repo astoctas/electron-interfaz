@@ -23,6 +23,7 @@ function PrintQueue() {
     this.queue = "";
 
     this.add = function(data) {
+        console.log(data) 
         this.queue = data;
     }
 
@@ -47,7 +48,6 @@ function RastiCC(io, config, deviceNum) {
     this.speed = 255;
     */
     this.onif = function() {
-        console.log(this)
         if(this.status) {
             if(!this.dir) {
                 this.io.digitalWrite(this.s2, 1);
@@ -419,7 +419,6 @@ function LCDPCF8574(io) {
     this.message = function(force) {
         if(!force && !this.enabled) return;
         this.data = _pq.get();
-        console.log(this.data)
         this.setTimeout();
         return this.data;
     }
