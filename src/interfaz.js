@@ -632,10 +632,12 @@ module.exports = function (five) {
                 this.MAXANALOGS = 4;
                 this.MAXDIGITAL = 4;
                 this.MAXPIXELS = 2;
+                this.MAXPINS = 2;
                 this.MAXI2CJOYSTICK = 1;
                 //var configs = five.Motor.SHIELD_CONFIGS.ADAFRUIT_V1;
                 //this.dc_config = [configs.M1,configs.M2, configs.M3, configs.M4];
                 this.servo_config = [9,10];
+                this.pins_config = [9,10];
                 this.analog_config = [14,15,16,17];
                 this.digital_config = [14,15,16,17];
                 this.pixels_config = [9,10];
@@ -643,6 +645,7 @@ module.exports = function (five) {
                 this._analogs = new Array(); 
                 this._digitals = new Array();
                 this._pings = new Array();
+                this._pins = new Array();
                 this._pixels = new Array();
                 this._i2cjoysticks = new Array();
             break;
@@ -678,7 +681,7 @@ module.exports = function (five) {
                     this.MAXDIGITAL = 4;
                     this.MAXPINS = 4;
                     this.MAXOUTPUTS = 2;
-                    this.MAXSERVOS = 2;
+                    this.MAXSERVOS = 4;
                     this.MAXPIXELS = 4;
                     this.MAXI2CJOYSTICK = 1;
                     this.digital_config = [9,10,11,12];
@@ -727,7 +730,7 @@ module.exports = function (five) {
             return this._steppers[index - 1];
         }
         Interfaz.prototype.servo = function (index) {
-            if (index < 1) index = 0;
+            if (index < 1) index = 1;
             if (index > this.MAXSERVOS) return index = this.MAXSERVOS - 1;
             if(typeof this._servos[index-1] == "undefined") {
                 this._servos[index-1] = new SERVOJ5(new five.Servo(this.servo_config[index-1]), index-1);

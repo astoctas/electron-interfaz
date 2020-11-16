@@ -185,10 +185,12 @@ io.sockets.on('connection', function (socket) {
   })
   
   socket.on('SERVO', function (data) {
+    console.log('SERVO', data);
+
     if(typeof ifaz == "undefined") return;
     initMessage();
     var result = ifaz.servo(data.index)[data.method](data.param);
-    sendMessage(msgKey)
+    sendMessage()
   })
   
   socket.on('ANALOG', function (data) {
@@ -259,7 +261,7 @@ io.sockets.on('connection', function (socket) {
     } else {
       var result = ifaz.digital(data.index)[data.method](data.param);
     }
-    sendMessage(msgKey)
+    sendMessage()
 
   })
 
