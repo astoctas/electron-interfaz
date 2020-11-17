@@ -21,14 +21,22 @@ function () {
 
 function PrintQueue() {
     this.queue = "";
+    this.lcd = false;
 
     this.add = function(data) {
         console.log(data) 
         this.queue = data;
+        this.message();
     }
 
     this.get = function() {
         return this.queue;
+    }
+
+    this.message = function() {
+        if(this.lcd) {
+            this.lcd.message();
+        }
     }
 }
 
@@ -166,7 +174,7 @@ function DC(io, deviceNum) {
         return true;
     }
     this.inverse = function() {
-        this.dir = !dir;
+        this.dir = !this.dir;
         this.io.sysexCommand([DC_MESSAGE,DC_INVERSE,this.deviceNum]);
         _pq.add([this.row0, "invertido ({0})".formatUnicorn(this.dir ? "B" : "A")]);
         return true;
@@ -282,15 +290,20 @@ function ANALOG(io, channel) {
 function PIN(io, deviceNum) {
     this.io = io;
     this.deviceNum = deviceNum;
+    this.row0 = "pin {0}".formatUnicorn(this.deviceNum+1);
+
     this.on = function() {
         this.io.high();
+        _pq.add([this.row0, "encendido"])
     }
     this.off = function() {
         this.io.low();
+        _pq.add([this.row0, "apagado"])
     }
     this.write = function(value) {
         this.io.io.pinMode(this.io.pin, 3);
         this.io.io.analogWrite(this.io.pin, value)
+        _pq.add([this.row0, "encendido {0}%".formatUnicorn(Math.floor(value/255*100))])
     }
 }
 
@@ -612,6 +625,7 @@ module.exports = function (five) {
             rows: 2,
             cols: 16
         }));
+        _pq.lcd = this._lcd;
         
     }
     

@@ -98,7 +98,9 @@ function start(board, model) {
   model = ifaz.init({model: model});
   window.localStorage.setItem("model", model);
   var lcd = ifaz.lcd();
-  lcd.message(["Conectado en",board.port]);
+  lcd.clear();
+  lcd.print(0,"Conectado en");
+  lcd.print(1,board.port);
 
   if(model == "rasti") {
     notificationTitle += "Rasti";
@@ -120,10 +122,11 @@ function repeatLastData(data, key, msgKey) {
   return result;
 }
 
-function sendMessage(result,key) {
+function  sendMessage(result,key) {
   if(typeof ifaz == "undefined") return false;
   if(typeof ifaz.lcd() == "undefined") return false;
   lastMessage[key] = ifaz.lcd().message();
+  console.log(lastMessage)
 }
 
 function repeatMessage(key) {
@@ -163,7 +166,7 @@ io.sockets.on('connection', function (socket) {
     msgKey = 'output_'+data.method;
     initMessage(data, 'output', msgKey);
     var result = ifaz.output(data.index)[data.method](data.param);
-    sendMessage(msgKey);
+    // sendMessage(msgKey);
   })
 
   socket.on('PIN', function (data) {
@@ -172,7 +175,7 @@ io.sockets.on('connection', function (socket) {
     initMessage();
     msgKey = 'pin_'+data.method;
     var result = ifaz.pin(data.index)[data.method](data.param);
-    sendMessage(msgKey);
+    // sendMessage(msgKey);
   })
   
   socket.on('STEPPER', function (data) {
@@ -181,7 +184,7 @@ io.sockets.on('connection', function (socket) {
     var result = ifaz.stepper(data.index)[data.method](data.param, function (result) {
       socket.emit('STEPPER_MESSAGE', { index: data.index, value: result });
     });
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
   })
   
   socket.on('SERVO', function (data) {
@@ -190,7 +193,7 @@ io.sockets.on('connection', function (socket) {
     if(typeof ifaz == "undefined") return;
     initMessage();
     var result = ifaz.servo(data.index)[data.method](data.param);
-    sendMessage()
+    // sendMessage()
   })
   
   socket.on('ANALOG', function (data) {
@@ -200,7 +203,7 @@ io.sockets.on('connection', function (socket) {
       socket.emit('ANALOG_MESSAGE', { index: data.index, value: result });
       //socket.emit('SENSOR_MESSAGE', { index: data.index, value: this.value, boolean: this.boolean });
     });
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
   })
   
   socket.on('PING', function (data) {
@@ -210,7 +213,7 @@ io.sockets.on('connection', function (socket) {
     var result = obj[data.method](function (result) {
       socket.emit('PING_MESSAGE', { index: data.index, cm: this.cm, inches: this.inches });
     }, data.controller);
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
   })
   
   socket.on('PIXEL', function (data) {
@@ -218,7 +221,7 @@ io.sockets.on('connection', function (socket) {
     initMessage();
     var obj = ifaz.pixel(data.index);
     var result = obj[data.method](data.param, data.param2, data.param3);
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
   })
   
   socket.on('I2CJOYSTICK', function (data) {
@@ -261,7 +264,7 @@ io.sockets.on('connection', function (socket) {
     } else {
       var result = ifaz.digital(data.index)[data.method](data.param);
     }
-    sendMessage()
+    // sendMessage()
 
   })
 
@@ -269,7 +272,7 @@ io.sockets.on('connection', function (socket) {
     if(typeof ifaz == "undefined") return;
     initMessage();
     var result = ifaz.lcd()[data.method](data.param, data.param2);
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
 
   })
   
@@ -280,7 +283,7 @@ io.sockets.on('connection', function (socket) {
     ifaz.i2c(data.address)[data.method](data.register, data.param, function (result) {
       socket.emit('I2C_MESSAGE', { address: data.address, register: data.register, value: result });
     });
-    sendMessage(msgKey)
+    // sendMessage(msgKey)
   })
   
   socket.on('DEVICES_RESET', function () {
