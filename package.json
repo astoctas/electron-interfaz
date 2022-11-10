@@ -35,7 +35,7 @@
   "author": "astoctas",
   "license": "CC0-1.0",
   "devDependencies": {
-    "electron": "^4.0.0",
+    "electron": "^18.3.7",
     "electron-builder": "^20.43.0",
     "electron-packager": "^13.1.1",
     "electron-rebuild": "^1.8.5"
